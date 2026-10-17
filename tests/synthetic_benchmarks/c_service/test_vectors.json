@@ -1,0 +1,104 @@
+{
+  "target": "c_service",
+  "test_vectors": [
+    {
+      "vector_id": "V01_GET_HEALTH",
+      "description": "Standard GET health check request",
+      "cli_args": [],
+      "stdin_data": "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: 35\n\n{\"status\":\"healthy\",\"uptime\":3600}\n[INFO] Service starting on port 8080 (max_clients: 128)\n[INFO] Handled GET /health -> status 200 (bytes: 106)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V02_POST_AUTH_SUCCESS",
+      "description": "POST auth with correct bearer token",
+      "cli_args": [],
+      "stdin_data": "POST /auth HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer metis_default_secret_token_2026\r\n\r\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: 38\n\n{\"authenticated\":true,\"user\":\"admin\"}\n[INFO] Service starting on port 8080 (max_clients: 128)\n[DEBUG] Session 1001 authenticated for client 127.0.0.1\n[INFO] Handled POST /auth -> status 200 (bytes: 109)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V03_POST_AUTH_FAILURE",
+      "description": "POST auth with invalid bearer token",
+      "cli_args": [],
+      "stdin_data": "POST /auth HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer wrong_token\r\n\r\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "HTTP/1.1 401 Unauthorized\nContent-Type: application/json\nContent-Length: 32\n\n{\"error\":\"invalid_credentials\"}\n[INFO] Service starting on port 8080 (max_clients: 128)\n[INFO] Handled POST /auth -> status 401 (bytes: 113)\n",
+      "expected_stderr": "[ERROR] Auth failed for client 127.0.0.1 (id: 1001)\n"
+    },
+    {
+      "vector_id": "V04_GET_ECHO",
+      "description": "GET echo API route with custom headers",
+      "cli_args": [],
+      "stdin_data": "GET /api/echo/test HTTP/1.1\r\nHost: localhost\r\nX-Custom-Header: Alpha\r\n\r\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: 59\n\n{\"method\":\"GET\",\"path\":\"/api/echo/test\",\"headers_count\":2}\n[INFO] Service starting on port 8080 (max_clients: 128)\n[INFO] Handled GET /api/echo/test -> status 200 (bytes: 130)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V05_GET_NOT_FOUND",
+      "description": "GET nonexistent route returning 404",
+      "cli_args": [],
+      "stdin_data": "GET /unknown_endpoint HTTP/1.1\r\nHost: localhost\r\n\r\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "HTTP/1.1 404 Not Found\nContent-Type: application/json\nContent-Length: 49\n\n{\"error\":\"not_found\",\"path\":\"/unknown_endpoint\"}\n[INFO] Service starting on port 8080 (max_clients: 128)\n[INFO] Handled GET /unknown_endpoint -> status 404 (bytes: 127)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V06_EMPTY_STDIN",
+      "description": "Empty payload on stdin triggering error",
+      "cli_args": [],
+      "stdin_data": "",
+      "expected_exit_code": 1,
+      "expected_stdout": "[INFO] Service starting on port 8080 (max_clients: 128)\n",
+      "expected_stderr": "[ERROR] Empty payload received on stdin\n"
+    },
+    {
+      "vector_id": "V07_MALFORMED_METHOD",
+      "description": "Malformed HTTP method triggering 400 error",
+      "cli_args": [],
+      "stdin_data": "INVALIDVERB /path HTTP/1.1\r\nHost: localhost\r\n\r\n",
+      "expected_exit_code": 3,
+      "expected_stdout": "[INFO] Service starting on port 8080 (max_clients: 128)\nHTTP/1.1 400 Bad Request\nContent-Length: 0\n\n",
+      "expected_stderr": "[ERROR] Malformed or unsupported HTTP method\n"
+    },
+    {
+      "vector_id": "V08_FLAG_DUMP_CONFIG",
+      "description": "CLI flag --dump-config with custom options",
+      "cli_args": [
+        "--dump-config",
+        "--port=9090",
+        "--max-clients=64",
+        "--secret=custom_secret_abc"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "[CONFIG] magic=0x53455256 port=8080 max_clients=128 secret=metis_default_secret_token_2026 logging=1 timeout=5000\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V09_FLAG_VERSION",
+      "description": "CLI flag --version",
+      "cli_args": [
+        "--version"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "c_service version 1.0.0 (darwin/arm64)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V10_FLAG_HELP",
+      "description": "CLI flag --help",
+      "cli_args": [
+        "--help"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "Usage: c_service [options]\nOptions:\n  --port=PORT        Set service port (default: 8080)\n  --max-clients=NUM  Set maximum concurrent clients\n  --secret=TOKEN     Set secret auth token\n  --dump-config      Print active configuration\n  --version          Show version info\n  --help             Show help message\n",
+      "expected_stderr": ""
+    }
+  ]
+}

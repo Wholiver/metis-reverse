@@ -1,0 +1,116 @@
+{
+  "target": "c_service",
+  "language": "c",
+  "compiler": "clang -O2",
+  "functions": [
+    {
+      "name": "main",
+      "signature": "int main(int argc, char **argv)",
+      "is_exported": true
+    },
+    {
+      "name": "config_init_default",
+      "signature": "void config_init_default(ServiceConfig *cfg)",
+      "is_exported": true
+    },
+    {
+      "name": "config_parse_args",
+      "signature": "int config_parse_args(ServiceConfig *cfg, int argc, char **argv)",
+      "is_exported": true
+    },
+    {
+      "name": "config_dump",
+      "signature": "void config_dump(const ServiceConfig *cfg)",
+      "is_exported": true
+    },
+    {
+      "name": "session_authenticate",
+      "signature": "int session_authenticate(SessionData *session, const ServiceConfig *cfg, const char *token)",
+      "is_exported": true
+    },
+    {
+      "name": "parse_http_request",
+      "signature": "int parse_http_request(const char *raw_data, size_t len, HttpRequest *req)",
+      "is_exported": true
+    },
+    {
+      "name": "process_http_request",
+      "signature": "void process_http_request(const HttpRequest *req, HttpResponse *res, const char *secret_token)",
+      "is_exported": true
+    },
+    {
+      "name": "format_http_response",
+      "signature": "void format_http_response(const HttpResponse *res, char *out_buf, size_t out_max, size_t *out_len)",
+      "is_exported": true
+    }
+  ],
+  "structs": [
+    {
+      "name": "ServiceConfig",
+      "fields": {
+        "magic": "uint32_t",
+        "port": "uint32_t",
+        "max_clients": "uint32_t",
+        "secret_token": "char[64]",
+        "enable_logging": "int",
+        "timeout_ms": "uint32_t"
+      }
+    },
+    {
+      "name": "SessionData",
+      "fields": {
+        "session_id": "uint32_t",
+        "client_ip": "char[32]",
+        "auth_token": "char[64]",
+        "is_authenticated": "int",
+        "request_count": "size_t",
+        "last_active_ts": "uint32_t"
+      }
+    },
+    {
+      "name": "HttpHeader",
+      "fields": {
+        "key": "char[64]",
+        "value": "char[128]"
+      }
+    },
+    {
+      "name": "HttpRequest",
+      "fields": {
+        "magic": "uint32_t",
+        "method": "char[16]",
+        "path": "char[256]",
+        "headers": "HttpHeader[16]",
+        "header_count": "size_t",
+        "body": "char[1024]",
+        "body_len": "size_t"
+      }
+    },
+    {
+      "name": "HttpResponse",
+      "fields": {
+        "status_code": "int",
+        "status_text": "const char*",
+        "response_body": "char[2048]",
+        "body_len": "size_t"
+      }
+    }
+  ],
+  "format_strings": [
+    "[CONFIG] magic=0x%08X port=%u max_clients=%u secret=%s logging=%d timeout=%u\n",
+    "[DEBUG] Session %u authenticated for client %s\n",
+    "[ERROR] Auth failed for client %s (id: %u)\n",
+    "[INFO] Service starting on port %u (max_clients: %u)\n",
+    "[INFO] Handled %s %s -> status %d (bytes: %zu)\n"
+  ],
+  "assert_conditions": [
+    "config_not_null",
+    "session_not_null",
+    "raw_data_not_null",
+    "req_not_null",
+    "len_check",
+    "http_magic_check",
+    "res_not_null",
+    "out_buf_not_null"
+  ]
+}

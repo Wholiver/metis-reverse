@@ -1,0 +1,127 @@
+{
+  "target": "js_obfuscated",
+  "test_vectors": [
+    {
+      "vector_id": "V01_CREATE_SESSION",
+      "description": "Create session with deterministic timestamp and parameters",
+      "cli_args": [
+        "--action=create",
+        "--user=bob",
+        "--role=admin",
+        "--now=1700000000",
+        "--ttl=1800"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"sessionId\":\"sess_af6ba57824c86f12\",\"payload\":{\"userId\":\"bob\",\"role\":\"admin\",\"issuedAt\":1700000000,\"expiresAt\":1700001800},\"signature\":\"545d1bf12773dc29d6ceacc25742dc70cee68ef4b23cd1dc8db1a7b60f643f68\",\"isActive\":true}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V02_HASH_DATA",
+      "description": "Hash user string using SHA-256 via CryptoUtil",
+      "cli_args": [
+        "--action=hash",
+        "--user=metis_user_test"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"input\":\"metis_user_test\",\"hash\":\"6ad3faabd0169fe622396ba32c57d969c4fffdf0b92ec02f9b49a24aaf5d1a2b\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V03_STDIN_HASH",
+      "description": "Process stdin hash command",
+      "cli_args": [
+        "--stdin"
+      ],
+      "stdin_data": "{\"op\": \"hash\", \"data\": \"secure_string_test\"}",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"op\":\"hash\",\"result\":\"dd0d1b17fc66bfa0617eab7ee29b1200e3dd880912c0fd91fa26db53b59f043c\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V04_STDIN_SIGN",
+      "description": "Process stdin sign command with custom secret",
+      "cli_args": [
+        "--stdin",
+        "--secret=custom_secret_key_123"
+      ],
+      "stdin_data": "{\"op\": \"sign\", \"payload\": {\"auth\": \"user1\"}}",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"op\":\"sign\",\"signature\":\"1655c1aa15fd8792fe91cf58f9298e63e3b1bc5274e5a18e71658b300dcd841a\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V05_EMPTY_STDIN",
+      "description": "Empty stdin triggers error exit code 1",
+      "cli_args": [
+        "--stdin"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_stderr": "[ERROR] Empty payload from stdin\n"
+    },
+    {
+      "vector_id": "V06_CORRUPTED_JSON_STDIN",
+      "description": "Corrupted JSON payload on stdin triggers parse error exit code 2",
+      "cli_args": [
+        "--stdin"
+      ],
+      "stdin_data": "{bad_json: 123",
+      "expected_exit_code": 2,
+      "expected_stdout": "",
+      "expected_stderr": "[ERROR] JSON parsing error: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n"
+    },
+    {
+      "vector_id": "V07_VERSION_FLAG",
+      "description": "Version flag displays release version string",
+      "cli_args": [
+        "--version"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "js_obfuscated v1.0.0 (node/es6)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V08_HELP_FLAG",
+      "description": "Help flag displays usage documentation",
+      "cli_args": [
+        "--help"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "Usage: node bundle.min.js [options]\nOptions:\n  --action=create|validate|hash\n  --secret=KEY\n  --user=USERNAME\n  --role=ROLE\n  --now=TIMESTAMP\n  --stdin\n  --version\n  --help\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V09_VALIDATE_SESSION_SUCCESS",
+      "description": "Validate active session token signature",
+      "cli_args": [
+        "--action=validate",
+        "--user=alice",
+        "--role=user",
+        "--session-id=sess_test1",
+        "--token=081e3ebeb7fa2bc382dd4d3ca94f9c17216afc785fff7c9083622322d0eac679",
+        "--now=1700000000",
+        "--ttl=3600"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"valid\":true,\"user\":\"alice\",\"role\":\"user\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V10_UNKNOWN_ACTION",
+      "description": "Unknown action argument triggers error exit code 1",
+      "cli_args": [
+        "--action=invalid_op"
+      ],
+      "stdin_data": "",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_stderr": "[ERROR] Unknown action: invalid_op\n"
+    }
+  ]
+}

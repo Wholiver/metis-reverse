@@ -1,0 +1,59 @@
+{
+  "target": "js_obfuscated",
+  "language": "javascript",
+  "minifier": "terser --compress passes=3 --mangle toplevel=true --mangle-props regex=/^_/",
+  "classes": [
+    {
+      "name": "CryptoUtil",
+      "mangled_name": "s",
+      "methods": [
+        "constructor",
+        "computeHash",
+        "signToken",
+        "verifySignature"
+      ],
+      "properties": [
+        { "original": "_secretKey", "mangled": "o" },
+        { "original": "_algorithm", "mangled": "t" }
+      ]
+    },
+    {
+      "name": "SessionManager",
+      "mangled_name": "o",
+      "methods": [
+        "constructor",
+        "createSession",
+        "validateSessionToken",
+        "revokeSession"
+      ],
+      "properties": [
+        { "original": "_crypto", "mangled": "i" },
+        { "original": "_defaultTtl", "mangled": "l" },
+        { "original": "_sessions", "mangled": "u" }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "parseCommandLineArgs",
+      "mangled_name": "i"
+    },
+    {
+      "name": "runCLI",
+      "mangled_name": "c"
+    }
+  ],
+  "literals_and_strings": [
+    "metis_default_hmac_secret_2026",
+    "sha256",
+    "sess_",
+    "Session not found: ",
+    "Session is revoked",
+    "Session expired",
+    "Invalid session signature",
+    "Usage: node bundle.min.js [options]",
+    "js_obfuscated v1.0.0 (node/es6)",
+    "[ERROR] Empty payload from stdin",
+    "[ERROR] Unknown stdin operation: "
+  ]
+}

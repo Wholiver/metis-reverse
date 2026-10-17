@@ -1,0 +1,72 @@
+{
+  "target": "go_pipeline",
+  "language": "go",
+  "compiler": "go build -ldflags=\"-s -w\" -trimpath",
+  "packages": [
+    "main",
+    "metis/pipeline/pkg/config",
+    "metis/pipeline/pkg/metrics",
+    "metis/pipeline/pkg/processor"
+  ],
+  "pclntab_functions": [
+    "main.main",
+    "metis/pipeline/pkg/config.DefaultConfig",
+    "metis/pipeline/pkg/config.ParseFlags",
+    "metis/pipeline/pkg/config.(*PipelineConfig).DumpJSON",
+    "metis/pipeline/pkg/metrics.NewMetricsCounter",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).IncReceived",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).IncProcessed",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).IncFiltered",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).IncErrors",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).AddBytes",
+    "metis/pipeline/pkg/metrics.(*MetricsCounter).ToJSON",
+    "metis/pipeline/pkg/processor.NewPipelinePool",
+    "metis/pipeline/pkg/processor.(*PipelinePool).Run",
+    "metis/pipeline/pkg/processor.(*PipelinePool).workerProcess",
+    "metis/pipeline/pkg/processor.(*PipelinePool).processSingleTask"
+  ],
+  "structs": [
+    {
+      "name": "PipelineConfig",
+      "package": "metis/pipeline/pkg/config",
+      "fields": {
+        "Workers": "int",
+        "BatchSize": "int",
+        "Timeout": "time.Duration",
+        "FilterKeyword": "string",
+        "ShowMetrics": "bool",
+        "Mode": "string"
+      }
+    },
+    {
+      "name": "MetricsCounter",
+      "package": "metis/pipeline/pkg/metrics",
+      "fields": {
+        "TotalReceived": "int64",
+        "TotalProcessed": "int64",
+        "TotalFiltered": "int64",
+        "TotalErrors": "int64",
+        "TotalBytesInput": "int64"
+      }
+    },
+    {
+      "name": "Task",
+      "package": "metis/pipeline/pkg/processor",
+      "fields": {
+        "ID": "int",
+        "Payload": "string"
+      }
+    },
+    {
+      "name": "TaskResult",
+      "package": "metis/pipeline/pkg/processor",
+      "fields": {
+        "ID": "int",
+        "Status": "string",
+        "Digest": "string",
+        "Output": "string",
+        "ErrorText": "string"
+      }
+    }
+  ]
+}

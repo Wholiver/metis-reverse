@@ -1,0 +1,9 @@
+{
+  "name": "js_obfuscated",
+  "version": "1.0.0",
+  "description": "Synthetic obfuscated JS benchmark for Metis Reverse",
+  "main": "dist/bundle.min.js",
+  "scripts": {
+    "build": "./build.sh"
+  }
+}

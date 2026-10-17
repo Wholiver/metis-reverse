@@ -1,0 +1,121 @@
+{
+  "target": "go_pipeline",
+  "test_vectors": [
+    {
+      "vector_id": "V01_STANDARD_TRANSFORM",
+      "description": "Standard batch payload transform to uppercase with sha256 digest",
+      "cli_args": [],
+      "env_vars": {},
+      "stdin_data": "hello world\nmetis reverse engineering\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"b94d27b9934d3e08\",\"output\":\"HELLO WORLD\"}\n{\"id\":2,\"status\":\"PROCESSED\",\"digest\":\"dfb8d4d6f3d0a2bc\",\"output\":\"METIS REVERSE ENGINEERING\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V02_FILTER_KEYWORD",
+      "description": "Keyword filtering keeps matching tasks and marks others FILTERED",
+      "cli_args": [
+        "-filter=special"
+      ],
+      "env_vars": {},
+      "stdin_data": "task one\nspecial task two\ntask three\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"FILTERED\"}\n{\"id\":2,\"status\":\"PROCESSED\",\"digest\":\"22f5925692bd7183\",\"output\":\"SPECIAL TASK TWO\"}\n{\"id\":3,\"status\":\"FILTERED\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V03_VALIDATE_MODE",
+      "description": "Validate mode outputs payload length instead of transform",
+      "cli_args": [
+        "-mode=validate"
+      ],
+      "env_vars": {},
+      "stdin_data": "apple\nbanana\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"3a7bd3e2360a3d29\",\"output\":\"VALID:5\"}\n{\"id\":2,\"status\":\"PROCESSED\",\"digest\":\"b493d48364afe44d\",\"output\":\"VALID:6\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V04_ERROR_HANDLING",
+      "description": "ERR: prefix triggers structured error status",
+      "cli_args": [],
+      "env_vars": {},
+      "stdin_data": "good task\nERR:corrupted_block\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"5828f8b83e930b75\",\"output\":\"GOOD TASK\"}\n{\"id\":2,\"status\":\"ERROR\",\"error\":\"corrupted_block\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V05_METRICS_FLAG",
+      "description": "Show metrics flag outputs json summary at end",
+      "cli_args": [
+        "-metrics"
+      ],
+      "env_vars": {},
+      "stdin_data": "task item alpha\ntask item beta\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"42e43757f7b541b2\",\"output\":\"TASK ITEM ALPHA\"}\n{\"id\":2,\"status\":\"PROCESSED\",\"digest\":\"0488abcd25ab9de5\",\"output\":\"TASK ITEM BETA\"}\n{\"total_bytes_input\":29,\"total_errors\":0,\"total_filtered\":0,\"total_processed\":2,\"total_received\":2}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V06_CONCURRENCY_WORKERS",
+      "description": "High worker count processes items concurrently with deterministic order",
+      "cli_args": [
+        "-workers=8"
+      ],
+      "env_vars": {},
+      "stdin_data": "item 1\nitem 2\nitem 3\nitem 4\nitem 5\nitem 6\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"acadda60a86d56e8\",\"output\":\"ITEM 1\"}\n{\"id\":2,\"status\":\"PROCESSED\",\"digest\":\"7f5f00f1199c4532\",\"output\":\"ITEM 2\"}\n{\"id\":3,\"status\":\"PROCESSED\",\"digest\":\"b312f0af7ea65f88\",\"output\":\"ITEM 3\"}\n{\"id\":4,\"status\":\"PROCESSED\",\"digest\":\"608b5cfa8e3731f1\",\"output\":\"ITEM 4\"}\n{\"id\":5,\"status\":\"PROCESSED\",\"digest\":\"cc7ff3eb6fcf9cba\",\"output\":\"ITEM 5\"}\n{\"id\":6,\"status\":\"PROCESSED\",\"digest\":\"dd0ff3e48ec39750\",\"output\":\"ITEM 6\"}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V07_EMPTY_INPUT",
+      "description": "Empty stdin terminates cleanly with zero output",
+      "cli_args": [],
+      "env_vars": {},
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V08_VERSION_FLAG",
+      "description": "Version flag displays release version",
+      "cli_args": [
+        "-version"
+      ],
+      "env_vars": {},
+      "stdin_data": "",
+      "expected_exit_code": 0,
+      "expected_stdout": "go_pipeline v1.2.0 (go/darwin)\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V09_ENV_OVERRIDE",
+      "description": "Environment variable PIPELINE_WORKERS override",
+      "cli_args": [
+        "-metrics"
+      ],
+      "env_vars": {
+        "PIPELINE_WORKERS": "2"
+      },
+      "stdin_data": "sample payload\n",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"id\":1,\"status\":\"PROCESSED\",\"digest\":\"eee57820203860ea\",\"output\":\"SAMPLE PAYLOAD\"}\n{\"total_bytes_input\":14,\"total_errors\":0,\"total_filtered\":0,\"total_processed\":1,\"total_received\":1}\n",
+      "expected_stderr": ""
+    },
+    {
+      "vector_id": "V10_INVALID_FLAG",
+      "description": "Unknown CLI flag returns status 2 and usage error",
+      "cli_args": [
+        "-nonexistent_flag"
+      ],
+      "env_vars": {},
+      "stdin_data": "",
+      "expected_exit_code": 2,
+      "expected_stdout": "",
+      "expected_stderr": "flag provided but not defined: -nonexistent_flag\nUsage of go_pipeline:\n  -batch int\n    \tBatch processing size (default 50)\n  -filter string\n    \tFilter tasks by keyword substring\n  -help\n    \tShow command usage\n  -metrics\n    \tOutput JSON metrics summary on exit\n  -mode string\n    \tProcessing mode: transform, filter, or validate (default \"transform\")\n  -version\n    \tShow pipeline version\n  -workers int\n    \tNumber of concurrent worker goroutines (default 4)\n"
+    }
+  ]
+}
