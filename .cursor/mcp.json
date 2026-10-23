@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "metis-reverse": {
+      "command": "${workspaceFolder}/.venv/bin/metis-reverse",
+      "args": [],
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "METIS_SIDECAR_DIR": "${workspaceFolder}/.metis_sidecars",
+        "GHIDRA_INSTALL_DIR": "/Users/huchenrui/.local/share/metis_env/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME": "/Users/huchenrui/.local/share/metis_env/jdk-21/Contents/Home",
+        "DOTNET_ROOT": "/Users/huchenrui/.dotnet",
+        "PATH": "/Users/huchenrui/.local/bin:/Users/huchenrui/.dotnet/tools:/Users/huchenrui/.dotnet:/Users/huchenrui/.local/share/metis_env/jdk-21/Contents/Home/bin:/Users/huchenrui/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "DYLD_FALLBACK_LIBRARY_PATH": "/Users/huchenrui/homebrew/lib"
+      },
+      "type": "stdio"
+    }
+  }
+}
