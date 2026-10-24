@@ -5,8 +5,8 @@
   "license": "Apache-2.0",
   "author": "Metis Reverse Authors",
   "bin": {
-    "metis": "./bin/metis.js",
-    "metis-reverse": "./bin/metis.js"
+    "metis": "bin/metis.js",
+    "metis-reverse": "bin/metis.js"
   },
   "files": [
     "bin",
