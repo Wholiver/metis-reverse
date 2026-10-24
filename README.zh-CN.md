@@ -115,7 +115,7 @@ uv pip install -e ".[dev]"
 
 </details>
 
-**2. 试一下。** 若仓库带 demo，先编译，再让 Agent 用 `re_*` / `js_*` 工具去看。
+**2. 试一下。** 进 `demo` 编译，再让 Agent 用 `re_*` / `js_*` 工具去看。
 
 ```bash
 cd demo && make
@@ -166,7 +166,7 @@ cd demo && make
 
 <p align="center"><img src="docs/images/readme/zh/sections/tools.png" alt="MCP 工具" width="100%"></p>
 
-**v1.0.0 引擎约 29 个 MCP 工具**（`re_*` / `js_*` handlers）。下面按组摘要，**不是**「9 大工具」那种缩水说法。
+**v1.0.0 引擎约 29 个 MCP 工具**（`re_*` / `js_*` handlers）。下面按任务分组摘要。
 
 <details>
 <summary><b>会话 · triage · 制品</b></summary>
