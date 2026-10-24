@@ -315,12 +315,12 @@ pip install -e ".[dev]" lief capstone pyyaml
 {
   "mcpServers": {
     "metis-reverse": {
-      "command": "/ABSOLUTE/PATH/TO/metis-revers/.venv/bin/python",
-      "args": ["-m", "metis_reverse.server"],
-      "env": {
-        "GHIDRA_INSTALL_DIR": "/ABSOLUTE/PATH/TO/ghidra_PUBLIC",
-        "METIS_SIDECAR_DIR": "/ABSOLUTE/PATH/TO/metis-revers/.metis_sidecars"
-      }
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Wholiver/metis-reverse.git",
+        "metis-reverse"
+      ]
     }
   }
 }

@@ -1,121 +1,280 @@
-# Metis-Reverse: Evidence-Grounded Agentic Reverse Engineering Platform
+<p align="center">
+  <img src="docs/images/readme/en/banner.png" alt="Metis Reverse" width="100%">
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
-[![MCP](https://img.shields.io/badge/MCP-2024--11--05-brightgreen)](https://modelcontextprotocol.io/)
+<p align="center">
+  Reverse-engineering MCP for your AI assistants — an MCP server plus a one-click multi-agent installer.
+</p>
 
-专为 AI Agent（如 Antigravity、Claude Code、Cursor）深度推理设计的现代化逆向工程 Model Context Protocol (MCP) 服务端与推理闭环系统。
+<p align="center">
+  <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
----
+<p align="center">
+  <a href="https://www.npmjs.com/package/metis-reverse-cli"><img src="https://img.shields.io/npm/v/metis-reverse-cli?color=5aa9e6&label=npm%20metis-reverse-cli" alt="npm metis-reverse-cli"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-5aa9e6.svg" alt="License: Apache-2.0"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-5aa9e6.svg" alt="Python 3.10+"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-5aa9e6.svg" alt="Node.js >=18"></a>
+  <a href="https://github.com/Wholiver/metis-reverse/stargazers"><img src="https://img.shields.io/github/stars/Wholiver/metis-reverse?style=flat&color=5aa9e6" alt="GitHub stars"></a>
+  <a href="#community"><img src="https://img.shields.io/badge/QQ%20group-801193315-5aa9e6.svg" alt="QQ 801193315"></a>
+</p>
 
-## 核心设计理念 (Core Principles)
+> **v1.0.0 — install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@1.0.0 setup`.
 
-1. **会话稳、可复现、可迁移 (Session Stability & Decoupled Portability)**
-   * 采用 Headless 架构与只读样本挂载，原生支持多样本并发。
-   * 采用**独立侧车文件（Sidecar YAML/JSON-L）**持久化所有符号、类型与推导记录，脱离特定 Ghidra 工程数据库，支持跨版本免数据库差分毫秒级重放。
-2. **每个结论都带证据 (Evidence Grounding & Zero Hallucination)**
-   * 所有算法、数据结构、解密密钥均绑定明确的虚拟地址（VA/RVA）与原始十六进制凭证。
-   * 查不到时返回严格的排查审计报告（`not_found` + `searched_locations`），坚决阻止模型幻觉。
-3. **输出为推理设计 (Reasoning-Optimized Output)**
-   * Token-bounded 块切片、调用拓扑拓扑内联、关联字符串与常量内联，避免单次返回巨量上下文击穿模型注意力。
-4. **假设验证闭环 (Dual-Layer Hypothesis Verification)**
-   * 内置受限 Python 算法验证沙箱（`re_verify_hypothesis`），让 Agent 自行验证解密脚本或 API 哈希还原，严禁脑内计算位运算。
-   * 支持起始/断点微仿真（`re_emulate_slice`），抓取真实寄存器与内存快照。
-5. **任务级能力，拒绝 200 个原子 API 膨胀 (Task-Level Tool Abstraction)**
-   * 摒弃臃肿复杂的 200+ 细粒度接口，精炼为 **9 个高内聚任务级 API**。
-6. **二进制内容视为不可信数据 (Prompt Injection Defense)**
-   * 内置 `PromptShield` 深度防护体系，检测并阻断二进制符号中内嵌的对抗性提示词注入载荷，提取内容均置于 `<untrusted_binary_evidence>` 安全围栏中。
-7. **理解逆向分析工具语义 (Domain Semantics Awareness)**
-   * 准确翻译 YARA、DIE 等外置逆向工具的特殊退出码（如非零返回代表“命中特征”而非执行失败）。
+<p align="center"><img src="docs/images/readme/en/sections/quickstart.png" alt="Quick Start" width="100%"></p>
 
----
+**1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
-## 9 大任务级 MCP 工具矩阵 (Tools Matrix)
-
-| 工具名称 | 核心职责 | 典型调用场景 |
-| :--- | :--- | :--- |
-| `re_session_manager` | 会话与快照管理 | 样本只读挂载、会话隔离、侧车标注导出与重放导入 |
-| `re_triage` | 初筛与格式画像 | PE/ELF/Mach-O 检测、全节区熵值热力图、YARA 语义解析 |
-| `re_query_function` | 推理友好型反编译 | 绑定地址代码片段、Caller/Callee 拓扑、关联常量内联、防注入安全围栏 |
-| `re_hunt_crypto_and_hashes` | 密码学与 API 哈希搜寻 | AES S-Box 扫描、SHA/MD5/ChaCha 常量识别、Windows API 哈希解析 |
-| `re_verify_hypothesis` | 算法假设自验沙箱 | 在隔离 Python 环境中运行 Agent 解密脚本，测试真实内存切片 |
-| `re_emulate_slice` | 受控局部微仿真 | 从起始地址模拟至断点，抓取真实寄存器状态与内存缓冲区 |
-| `re_refine_model` | 知识固化与类型沉淀 | 重命名函数/局部变量、定义结构体字段、写入侧车文件 |
-| `re_diff_and_transfer` | 跨版本标注迁移 | 基于 CFG 哈希与常量指纹匹配新老版本样本，自动化迁移标注 |
-| `re_query_evidence` | 证据链全链路溯源 | 追查符号/算法推导来源；未命中时输出审计清单拒绝幻觉 |
-
----
-
-## 快速安装与配置 (Installation)
-
-### 1. 安装 Python 依赖
 ```bash
-git clone https://github.com/metis-reverse/metis-reverse.git
-cd metis-reverse
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+npx metis-reverse-cli@1.0.0 setup
 ```
 
-### 2. 配置 MCP 客户端 (例如 Claude Desktop 或 Antigravity)
+Or install the CLI globally, then run the same wizard:
 
-在 MCP 配置文件（如 `claude_desktop_config.json` 或 Antigravity MCP 配置）中添加：
+```bash
+npm install -g metis-reverse-cli@1.0.0
+metis setup          # same binary as `metis-reverse`
+```
+
+`setup` finds coding agents on your machine, shows what it will write (MCP + Skill + Cursor rules), keeps a `.bak` of existing MCP configs, and asks before writing. When you see `Done.`, restart the agent. Check with:
+
+```bash
+metis doctor
+# or: npx metis-reverse-cli@1.0.0 doctor
+```
+
+Remove only Metis Reverse (other MCP servers stay):
+
+```bash
+metis uninstall
+```
+
+Dry-run / preview without writing:
+
+```bash
+metis preview
+# same as: metis setup --dry-run
+```
+
+<details>
+<summary><b>Which apps it can configure (~23)</b></summary>
+
+`setup` shows a picker. Skip the menu with `--client` (repeatable) and `--yes`, e.g. `metis setup --client cursor --client claude_code --yes`.
+
+| App | `--client` | App | `--client` |
+|:---|:---|:---|:---|
+| Cursor | `cursor` | Claude Code | `claude_code` |
+| Claude Desktop | `claude_desktop` | Codex | `codex` |
+| Gemini CLI | `gemini_cli` | Antigravity | `antigravity` |
+| VS Code | `vscode` | Windsurf | `windsurf` |
+| Trae | `trae` | OpenCode | `opencode` |
+| WorkBuddy | `workbuddy` | GitHub Copilot CLI | `copilot_cli` |
+| Devin | `devin` | Kimi Code | `kimi` |
+| Qwen Code | `qwen_code` | Grok Build | `grok_build` |
+| Hermes | `hermes` | Qoder | `qoder` |
+| Factory Droid | `droid` | OMP | `omp` |
+| Pi | `pi` | ZCode | `zcode` |
+| DeepSeek Harness | `dsh` | | |
+
+Cursor also gets `~/.cursor/skills/metis-reverse` and `~/.cursor/rules/metis-reverse.mdc`. Fully quit Claude Desktop before running `setup` for it.
+
+</details>
+
+<details>
+<summary><b>Advanced: manual MCP config & source install</b></summary>
+
+What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI):
 
 ```json
 {
   "mcpServers": {
     "metis-reverse": {
-      "command": "/Users/huchenrui/metis-revers/.venv/bin/python",
-      "args": ["-m", "metis_reverse.server"],
-      "env": {
-        "GHIDRA_INSTALL_DIR": "/path/to/ghidra_11.x_PUBLIC",
-        "METIS_SIDECAR_DIR": "/path/to/your/project/.metis_sidecars"
-      }
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Wholiver/metis-reverse.git",
+        "metis-reverse"
+      ]
     }
   }
 }
 ```
 
-*注：如果系统暂未安装 Ghidra，Metis-Reverse 会自动启动高保真 Mock/Fallback 引擎，确保全套沙箱验证、Sidecar 存储与证据追踪功能正常运行。*
+Optional env (not written by default): `GHIDRA_INSTALL_DIR`, `METIS_SIDECAR_DIR`.
 
----
-
-## 配套逆向专家 Skill
-
-项目在 [`skills/metis-reverse-mcp/SKILL.md`](skills/metis-reverse-mcp/SKILL.md) 中提供了工业级逆向 Agent 认知飞轮指令，可直接供 Claude Code 或 Antigravity 挂载使用，驱动智能体按照“初筛 -> 假设 -> 沙箱自验 -> 仿真比对 -> 侧车沉淀 -> 证据闭环”的标准工程流程自主逆向。
-
----
-
-## 架构升级：全语言与工件树 (Polyglot & Artifact Tree Architecture)
-
-系统全面支持现代复合应用（如 Bun 单文件、Electron ASAR、PyInstaller、.NET 单文件与混合编译工程）：
-* **层次化工件树（Artifact Tree）：** 自动解析复合容器、支持按需懒激活、游标分页检索（R2）与任意节点三元坐标换算（`{va, rva, file_offset}`）。
-* **多语言混合检测与桥接分析（Polyglot & Bridge）：** 自动识别 C/C++、Go、Rust、Swift、.NET、Python、Node.js，打通 N-API、JNI、IPC、FFI 跨层调用链路。
-* **三大逃生通道（Escape Hatches）：**
-  1. **自定义解析脚本探针（`execute_probe_script`）：** 在只读沙箱内由 Agent 编写并执行 Python 探针，支持动态提取并挂载子工件。
-  2. **非标字符串与物理切片提取（`re_deep_static`）：** 支持任意物理切片指定、C-string、UTF-16 与非 `\0` 结尾的 Go/Rust/Swift 内存切片。
-  3. **启发式跨层断链链接（`re_bridge_map`）：** 在缺乏符号或发生去符号化时，通过启发式签名匹配关联高级语言调用与底层 Native 导出。
-
-详细安全合规底线与仿真边界请查阅 [合规边界与已知限制文档](docs/known-limits.md)。
-
----
-
-## 运行单元测试
+From a source checkout (Python **3.10+**):
 
 ```bash
-pytest tests -v
+git clone https://github.com/Wholiver/metis-reverse.git
+cd metis-reverse
+uv venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
 
-测试集涵盖：
-* 提示词对抗注入拦截与无害化封装（`test_prompt_shield.py`）
-* 假设验证沙箱与恶意代码阻断（`test_sandbox.py`）
-* 侧车标注持久化与跨补丁版本自动迁移（`test_sidecar_store.py`）
-* 证据溯源与严格否定排查审计（`test_evidence_service.py`）
-* 9 个任务级 MCP 工具全流程端到端集成测试（`test_mcp_tools.py`）
+Then point MCP `command` at that environment’s `metis-reverse`, or keep using the `uvx --from git+…` form above.
+
+</details>
+
+**2. Try it.** Build the bundled demo (if present), then ask your agent to inspect it with the `re_*` / `js_*` tools.
+
+```bash
+cd demo && make
+```
+
+> Inspect `demo/demo_target`. Triage the binary, decompile the interesting functions, pull evidence for names and types, then verify any hypothesis before you trust it.
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/images/readme/en/evidence.png" alt="Evidence and findings" width="100%"><br><br>
+
+**Evidence stays attached.** `re_query_evidence` and `re_add_finding` keep provenance on symbols and addresses so the agent can cite why a name or type is trusted.
+
+</td>
+<td width="50%" valign="top"><img src="docs/images/readme/en/tiers.png" alt="Inspect and capabilities" width="100%"><br><br>
+
+**Inspect first, then go deeper.** `re_inspect` / `re_triage` / `re_capabilities` give a cheap first pass; optional backends (e.g. Ghidra via `GHIDRA_INSTALL_DIR`) are used when present, otherwise the built-in path still runs.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/images/readme/en/feature-reconstruct.png" alt="Decompile and refine" width="100%"><br><br>
+
+**Decompile, refine, transfer.** Task-level tools like `re_decompile_function`, `re_refine_model`, and `re_diff_and_transfer` move analysis forward without dumping raw one-shot APIs on the agent.
+
+</td>
+<td width="50%" valign="top"><img src="docs/images/readme/en/dynamic.png" alt="Emulate and probe" width="100%"><br><br>
+
+**Probe when static is not enough.** `re_emulate_slice` and `re_run_probe_script` pull concrete values from a slice or a probe and feed them back into the session.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/images/readme/en/edit.png" alt="Session state" width="100%"><br><br>
+
+**Session state is shared.** `re_session_manager`, artifact lists, and findings keep later steps on the same tree — the agent does not start from zero every turn.
+
+</td>
+<td width="50%" valign="top"><img src="docs/images/readme/en/verify.png" alt="Verify hypotheses" width="100%"><br><br>
+
+**Verify before you ship a claim.** `re_verify_hypothesis` and related checks push the agent to test ideas instead of narrating them.
+
+</td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/images/readme/en/arch.png" alt="Architecture" width="100%"></p>
+
+<p align="center"><img src="docs/images/readme/en/sections/tools.png" alt="MCP Tools" width="100%"></p>
+
+**About 29 MCP tools** in the v1.0.0 engine (handlers under `re_*` and `js_*`). Grouped for reading — not a fake “9 tools” summary.
+
+<details>
+<summary><b>Session · triage · artifacts</b></summary>
+
+| Tool | Role |
+|:---|:---|
+| `re_session_manager` | Open / manage analysis sessions |
+| `re_inspect` | First-pass look at a target |
+| `re_triage` | Cheap ranking of what matters |
+| `re_tree_status` | Status of the analysis tree |
+| `re_list_artifacts` / `re_inspect_artifact` | List and inspect artifacts |
+| `re_capabilities` | What this environment can do |
+| `re_register_child_artifact` | Attach a child artifact |
+
+</details>
+
+<details>
+<summary><b>Binary structure · decompile · schemas</b></summary>
+
+| Tool | Role |
+|:---|:---|
+| `re_inspect_binary_structure` | Layout / sections / structure |
+| `re_read_file_range` | Read a byte range |
+| `re_translate_address` | Address translation |
+| `re_query_function` | Function metadata |
+| `re_decompile_function` | Decompile one function |
+| `re_bridge_map` | Bridge / IPC-style maps |
+| `re_extract_schemas` | Extract schemas / shapes |
+
+</details>
+
+<details>
+<summary><b>JavaScript / Electron-style targets</b></summary>
+
+| Tool | Role |
+|:---|:---|
+| `js_list_modules` / `js_get_module` | Modules |
+| `js_list_closures` | Closures |
+| `js_search` | Search |
+| `js_functions` / `js_strings` | Functions and strings |
+
+</details>
+
+<details>
+<summary><b>Hunt · emulate · verify · evidence</b></summary>
+
+| Tool | Role |
+|:---|:---|
+| `re_hunt_crypto_and_hashes` | Crypto / hash hunting |
+| `re_emulate_slice` | Emulate a slice |
+| `re_run_probe_script` | Run a probe |
+| `re_verify_hypothesis` | Test a hypothesis |
+| `re_refine_model` | Refine the working model |
+| `re_diff_and_transfer` | Diff and transfer findings |
+| `re_query_evidence` / `re_add_finding` | Evidence and findings |
+
+</details>
+
+<p align="center"><img src="docs/images/readme/en/sections/clients.png" alt="CLI reference" width="100%"></p>
+
+| Command | What it does |
+|:---|:---|
+| `metis setup` | Write MCP + Skill (+ Cursor rules); aliases: `init`, `install` |
+| `metis doctor` | Detect clients and whether MCP / Skill are configured; aliases: `check`, `status` |
+| `metis uninstall` | Remove only `metis-reverse` keys / skill / rules; alias: `remove` |
+| `metis preview` | Dry-run setup (`setup --dry-run`) |
+
+Bins from the npm package: **`metis`** and **`metis-reverse`** (same entrypoint).
+
+<details>
+<summary><b>Running tests (from source)</b></summary>
+
+```bash
+pytest tests/unit/
+pytest tests/e2e/
+pytest --cov=metis_reverse tests/
+```
+
+Optional backends (Ghidra, compilers, …) are not required for every suite. Expect some skips on a blank machine.
+
+</details>
+
+<a id="community"></a>
+
+<p align="center"><img src="docs/images/readme/en/sections/community.png" alt="Community" width="100%"></p>
+
+Metis QQ group: **801193315**
+
+<p align="center"><img src="docs/images/metis-community-qq.png" alt="Metis QQ group QR code" width="240"></p>
+
+<p align="center">This project supports the <a href="https://linux.do">LINUX DO</a> community.</p>
+
+## Acknowledgements
+
+Built with (and optional external tools when you install them yourself):
+
+<details>
+<summary>Show projects</summary>
+
+- [uv](https://github.com/astral-sh/uv) — install & `uvx` runner  
+- [@clack/prompts](https://github.com/bombshell-dev/clack) / [picocolors](https://github.com/alexeyraspopov/picocolors) — CLI UX  
+- [PyYAML](https://github.com/yaml/pyyaml) — engine config  
+- Optional when present: [Ghidra](https://ghidra-sre.org/), clang / gcc, and other sidecars  
+
+Full notices live in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when that file is in the tree. Contributors: [CONTRIBUTORS.md](CONTRIBUTORS.md).
+
+</details>
 
 ---
 
-## License
-
-Apache-2.0 License.
+<sub>Released under the [Apache-2.0 License](LICENSE). Engine + docs: [github.com/Wholiver/metis-reverse](https://github.com/Wholiver/metis-reverse). CLI on npm: [metis-reverse-cli](https://www.npmjs.com/package/metis-reverse-cli).</sub>

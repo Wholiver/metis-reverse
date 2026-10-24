@@ -343,21 +343,24 @@ Install the specific toolchain matching the user's target binary family:
 | **Signature & Packer Triage** | `yara` | `brew install yara` | `sudo apt install yara` |
 
 ### 4.4 Configuring MCP Client Settings (`.cursor/mcp.json` / `claude_desktop_config.json`)
-After installing dependencies, ensure the MCP server configuration points to the virtualenv Python interpreter and passes `GHIDRA_INSTALL_DIR` and `METIS_SIDECAR_DIR`:
+**Preferred (matches `metis-reverse-cli` / `metis setup`):** point the MCP client at `uvx` pulling this repo. Requires [uv](https://docs.astral.sh/uv/) and GitHub access.
 ```json
 {
   "mcpServers": {
     "metis-reverse": {
-      "command": "/ABSOLUTE/PATH/TO/metis-revers/.venv/bin/python",
-      "args": ["-m", "metis_reverse.server"],
-      "env": {
-        "GHIDRA_INSTALL_DIR": "/ABSOLUTE/PATH/TO/ghidra_PUBLIC",
-        "METIS_SIDECAR_DIR": "/ABSOLUTE/PATH/TO/metis-revers/.metis_sidecars"
-      }
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Wholiver/metis-reverse.git",
+        "metis-reverse"
+      ]
     }
   }
 }
 ```
+Or run `npx metis-reverse-cli@1.0.0 setup` and let the CLI write the same entry.
+
+**Advanced (from-source venv):** only if you develop the engine locally — set `command` to your venv’s `python` with `args: ["-m", "metis_reverse.server"]`, and optionally pass `GHIDRA_INSTALL_DIR` / `METIS_SIDECAR_DIR` in `env`. Prefer absolute paths you control; do not copy placeholder paths from old docs.
 > **Note**: After updating Python packages (`lief`, `capstone`) or `GHIDRA_INSTALL_DIR`, restart the MCP server (or reload the MCP client connection) and re-run `re_capabilities` to confirm the upgraded capability status.
 
 ---
