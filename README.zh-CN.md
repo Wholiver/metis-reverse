@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/readme/zh/banner.png" alt="Metis Reverse" width="100%">
+  <img src="docs/images/readme/zh/banner-v2.png" alt="Metis Reverse" width="100%">
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 > **v1.0.0 — 请装对包名。** 正式 CLI 是 [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli)。旧 npm 名 `metis-reverse` 仍停在 **0.0.1**，**不是**本版。推荐：`npx metis-reverse-cli@1.0.0 setup`。
 
-<p align="center"><img src="docs/images/readme/zh/sections/quickstart.png" alt="快速开始" width="100%"></p>
+<p align="center"><img src="docs/images/readme/zh/sections/quickstart-v2.png" alt="快速开始" width="100%"></p>
 
 **1. 安装并接入。** 需要 [Node.js](https://nodejs.org/) 18+ 和 [uv](https://docs.astral.sh/uv/)（引擎用 `uvx` 从 GitHub 拉；**目前没有** PyPI 包）。
 
@@ -125,36 +125,36 @@ cd demo && make
 
 <table>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/evidence.png" alt="证据与发现" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/evidence-v2.png" alt="证据与发现" width="100%"><br><br>
 
 **证据挂在结论上。** `re_query_evidence`、`re_add_finding` 会保留符号/地址的出处，方便 Agent 说明为什么可信。
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/tiers.png" alt="检查与能力探测" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/tiers-v2.png" alt="检查与能力探测" width="100%"><br><br>
 
 **先看清，再深入。** `re_inspect` / `re_triage` / `re_capabilities` 做廉价首轮；装了可选后端（如通过 `GHIDRA_INSTALL_DIR` 接 Ghidra）就用，没装也有内建路径。
 
 </td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/feature-reconstruct.png" alt="反编译与精炼" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/feature-reconstruct-v2.png" alt="反编译与精炼" width="100%"><br><br>
 
 **反编译、精炼、迁移。** `re_decompile_function`、`re_refine_model`、`re_diff_and_transfer` 等是任务级接口，避免把一堆原子 API 砸给 Agent。
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/dynamic.png" alt="模拟与探测" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/dynamic-v2.png" alt="模拟与探测" width="100%"><br><br>
 
 **静态不够就探测。** `re_emulate_slice`、`re_run_probe_script` 从切片或探测脚本拿具体值，再写回会话。
 
 </td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/edit.png" alt="会话状态" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/edit-v2.png" alt="会话状态" width="100%"><br><br>
 
 **会话状态可延续。** `re_session_manager`、制品列表和 findings 让后续步骤接着同一棵树，而不是每轮从零开始。
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/zh/verify.png" alt="验证假设" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/zh/verify-v2.png" alt="验证假设" width="100%"><br><br>
 
 **先验证，再下结论。** `re_verify_hypothesis` 等工具推动 Agent 测想法，而不是只讲故事。
 
@@ -162,9 +162,9 @@ cd demo && make
 </tr>
 </table>
 
-<p align="center"><img src="docs/images/readme/zh/arch.png" alt="架构" width="100%"></p>
+<p align="center"><img src="docs/images/readme/zh/arch-v2.png" alt="架构" width="100%"></p>
 
-<p align="center"><img src="docs/images/readme/zh/sections/tools.png" alt="MCP 工具" width="100%"></p>
+<p align="center"><img src="docs/images/readme/zh/sections/tools-v2.png" alt="MCP 工具" width="100%"></p>
 
 **v1.0.0 引擎约 29 个 MCP 工具**（`re_*` / `js_*` handlers）。下面按任务分组摘要。
 
