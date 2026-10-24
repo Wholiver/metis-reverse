@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/readme/en/banner.png" alt="Metis Reverse" width="100%">
+  <img src="docs/images/readme/en/banner-v2.png" alt="Metis Reverse" width="100%">
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 > **v1.0.0 — install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@1.0.0 setup`.
 
-<p align="center"><img src="docs/images/readme/en/sections/quickstart.png" alt="Quick Start" width="100%"></p>
+<p align="center"><img src="docs/images/readme/en/sections/quickstart-v2.png" alt="Quick Start" width="100%"></p>
 
 **1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
@@ -125,36 +125,36 @@ cd demo && make
 
 <table>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/en/evidence.png" alt="Evidence and findings" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/evidence-v2.png" alt="Evidence and findings" width="100%"><br><br>
 
 **Evidence stays attached.** `re_query_evidence` and `re_add_finding` keep provenance on symbols and addresses so the agent can cite why a name or type is trusted.
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/en/tiers.png" alt="Inspect and capabilities" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/tiers-v2.png" alt="Inspect and capabilities" width="100%"><br><br>
 
 **Inspect first, then go deeper.** `re_inspect` / `re_triage` / `re_capabilities` give a cheap first pass; optional backends (e.g. Ghidra via `GHIDRA_INSTALL_DIR`) are used when present, otherwise the built-in path still runs.
 
 </td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/en/feature-reconstruct.png" alt="Decompile and refine" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/feature-reconstruct-v2.png" alt="Decompile and refine" width="100%"><br><br>
 
 **Decompile, refine, transfer.** Task-level tools like `re_decompile_function`, `re_refine_model`, and `re_diff_and_transfer` move analysis forward without dumping raw one-shot APIs on the agent.
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/en/dynamic.png" alt="Emulate and probe" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/dynamic-v2.png" alt="Emulate and probe" width="100%"><br><br>
 
 **Probe when static is not enough.** `re_emulate_slice` and `re_run_probe_script` pull concrete values from a slice or a probe and feed them back into the session.
 
 </td>
 </tr>
 <tr>
-<td width="50%" valign="top"><img src="docs/images/readme/en/edit.png" alt="Session state" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/edit-v2.png" alt="Session state" width="100%"><br><br>
 
 **Session state is shared.** `re_session_manager`, artifact lists, and findings keep later steps on the same tree — the agent does not start from zero every turn.
 
 </td>
-<td width="50%" valign="top"><img src="docs/images/readme/en/verify.png" alt="Verify hypotheses" width="100%"><br><br>
+<td width="50%" valign="top"><img src="docs/images/readme/en/verify-v2.png" alt="Verify hypotheses" width="100%"><br><br>
 
 **Verify before you ship a claim.** `re_verify_hypothesis` and related checks push the agent to test ideas instead of narrating them.
 
@@ -162,9 +162,9 @@ cd demo && make
 </tr>
 </table>
 
-<p align="center"><img src="docs/images/readme/en/arch.png" alt="Architecture" width="100%"></p>
+<p align="center"><img src="docs/images/readme/en/arch-v2.png" alt="Architecture" width="100%"></p>
 
-<p align="center"><img src="docs/images/readme/en/sections/tools.png" alt="MCP Tools" width="100%"></p>
+<p align="center"><img src="docs/images/readme/en/sections/tools-v2.png" alt="MCP Tools" width="100%"></p>
 
 **About 29 MCP tools** in the v1.0.0 engine (handlers under `re_*` and `js_*`). Grouped by task below.
 
