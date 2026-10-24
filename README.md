@@ -115,7 +115,7 @@ Then point MCP `command` at that environment’s `metis-reverse`, or keep using 
 
 </details>
 
-**2. Try it.** Build the bundled demo (if present), then ask your agent to inspect it with the `re_*` / `js_*` tools.
+**2. Try it.** Build the bundled `demo`, then ask your agent to inspect it with the `re_*` / `js_*` tools.
 
 ```bash
 cd demo && make
@@ -166,7 +166,7 @@ cd demo && make
 
 <p align="center"><img src="docs/images/readme/en/sections/tools.png" alt="MCP Tools" width="100%"></p>
 
-**About 29 MCP tools** in the v1.0.0 engine (handlers under `re_*` and `js_*`). Grouped for reading — not a fake “9 tools” summary.
+**About 29 MCP tools** in the v1.0.0 engine (handlers under `re_*` and `js_*`). Grouped by task below.
 
 <details>
 <summary><b>Session · triage · artifacts</b></summary>
