@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "metis-reverse"
-version = "0.2.0"
+version = "1.0.0"
 description = "Evidence-grounded Agentic Reverse Engineering MCP Server & Framework"
 readme = "README.md"
 requires-python = ">=3.10"

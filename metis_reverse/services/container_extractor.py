@@ -243,8 +243,8 @@ class ContainerExtractor:
             raise KeyError(f"Parent artifact '{parent_id}' not found in artifact tree")
 
         actual_size = len(content) if content else length
-        if actual_size > 50 * 1024 * 1024:
-            raise ValueError(f"Artifact size ({actual_size} bytes) exceeds safety limit of 50MB (R6 DoS protection)")
+        if actual_size > 4 * 1024 * 1024 * 1024:
+            raise ValueError(f"Artifact size ({actual_size} bytes) exceeds safety limit of 4GB (R6 DoS protection)")
 
         if name and (".." in name or "/" in name or "\\" in name):
             raise ValueError("Artifact name cannot contain directory traversal characters ('..', '/', '\\')")
@@ -267,3 +267,206 @@ class ContainerExtractor:
         )
         tree.add_node(node, content=content)
         return node
+
+    @classmethod
+    def extract_directory_bundle(cls, dir_path: Path, root_node: ArtifactNode, tree: ArtifactTree) -> List[ArtifactNode]:
+        """Scans macOS .app bundles, frameworks, and installation directories, building the child artifact tree."""
+        extracted: List[ArtifactNode] = []
+        if not dir_path.is_dir():
+            return extracted
+
+        # Check for macOS .app or bundle structure
+        info_plist_path = None
+        for cand in [dir_path / "Contents" / "Info.plist", dir_path / "Info.plist"]:
+            if cand.is_file():
+                info_plist_path = cand
+                break
+
+        parsed_plist: Dict[str, Any] = {}
+        main_exec_name = None
+        if info_plist_path:
+            try:
+                plist_data = info_plist_path.read_bytes()
+                import plistlib
+                parsed_plist = plistlib.loads(plist_data)
+                main_exec_name = parsed_plist.get("CFBundleExecutable")
+                root_node.custom_metadata["parsed_plist"] = parsed_plist
+                plist_node = ArtifactNode(
+                    id=f"{root_node.id}:info_plist",
+                    parent_id=root_node.id,
+                    name=info_plist_path.name,
+                    file_path=str(info_plist_path.absolute()),
+                    size=len(plist_data),
+                    sha256=hashlib.sha256(plist_data).hexdigest(),
+                    families=["plist", "bplist" if plist_data.startswith(b"bplist00") else "xml_plist", "metadata"],
+                    custom_metadata={"parsed_plist": parsed_plist},
+                )
+                tree.add_node(plist_node, content=plist_data)
+                extracted.append(plist_node)
+            except Exception:
+                pass
+
+        # Identify main executable
+        if main_exec_name:
+            exec_cand = dir_path / "Contents" / "MacOS" / main_exec_name
+            if not exec_cand.is_file():
+                exec_cand = dir_path / main_exec_name
+            if exec_cand.is_file():
+                st = exec_cand.stat()
+                hdr = exec_cand.read_bytes()[:4096] if st.st_size > 0 else b""
+                from .polyglot_detector import PolyglotDetector
+                labels = PolyglotDetector.detect_labels(hdr)
+                exec_node = ArtifactNode(
+                    id=f"{root_node.id}:main_exec",
+                    parent_id=root_node.id,
+                    name=main_exec_name,
+                    file_path=str(exec_cand.absolute()),
+                    size=st.st_size,
+                    families=["main_executable", "native"] + [l["name"].lower() for l in labels],
+                    capabilities=PolyglotDetector.get_capabilities(labels),
+                    is_activated=True,
+                    custom_metadata={"is_main_executable": True},
+                )
+                tree.add_node(exec_node)
+                extracted.append(exec_node)
+
+        # Recursively search for significant files:
+        # Dynamic libraries, frameworks, native modules, app.asar, databases
+        count = 0
+        for p in dir_path.rglob("*"):
+            if not p.is_file() or count >= 200:
+                continue
+            if info_plist_path and p.resolve() == info_plist_path.resolve():
+                continue
+            if main_exec_name and p.name == main_exec_name:
+                continue
+
+            rel_str = str(p.relative_to(dir_path))
+            lower_name = p.name.lower()
+            families = []
+
+            if lower_name.endswith((".dylib", ".so", ".dll")):
+                families = ["dynamic_library", "native"]
+            elif lower_name.endswith(".node"):
+                families = ["napi_node", "native"]
+            elif lower_name == "app.asar":
+                families = ["electron_asar", "container"]
+            elif lower_name.endswith((".sqlite", ".sqlite3", ".db")):
+                families = ["sqlite", "database"]
+            elif lower_name == "assets.car":
+                families = ["car_archive", "assets"]
+            elif lower_name.endswith((".class", ".jar")):
+                families = ["jvm", "bytecode"]
+            elif lower_name.endswith(".wasm"):
+                families = ["wasm", "bytecode"]
+            elif lower_name.endswith(".pyc"):
+                families = ["python", "bytecode"]
+            elif lower_name.endswith(".hbc"):
+                families = ["hermes", "bytecode"]
+            elif lower_name in ("package.json", "manifest.json", "cargo.toml"):
+                families = ["manifest", "configuration"]
+
+            if families:
+                st = p.stat()
+                node_id = f"{root_node.id}:item:{count}"
+                child = ArtifactNode(
+                    id=node_id,
+                    parent_id=root_node.id,
+                    name=p.name,
+                    file_path=str(p.absolute()),
+                    size=st.st_size,
+                    families=families,
+                    custom_metadata={"relative_path": rel_str},
+                )
+                tree.add_node(child)
+                extracted.append(child)
+                count += 1
+
+        return extracted
+
+    @classmethod
+    def extract_archive_container(cls, archive_path: Path, root_node: ArtifactNode, tree: ArtifactTree) -> List[ArtifactNode]:
+        """Enumerates archive containers (.zip, .vsix, .crx, .ipa, .jar, .whl) safely per R6."""
+        import zipfile
+        import io
+
+        extracted: List[ArtifactNode] = []
+        if not archive_path.is_file():
+            return extracted
+
+        is_crx = False
+        crx_zip_offset = 0
+
+        # Check for CRX2 / CRX3
+        try:
+            with open(archive_path, "rb") as f:
+                magic = f.read(4)
+                if magic == b"Cr24":
+                    is_crx = True
+                    ver = struct.unpack("<I", f.read(4))[0]
+                    if ver == 2:
+                        pubkey_len = struct.unpack("<I", f.read(4))[0]
+                        sig_len = struct.unpack("<I", f.read(4))[0]
+                        crx_zip_offset = 16 + pubkey_len + sig_len
+                    elif ver == 3:
+                        header_len = struct.unpack("<I", f.read(4))[0]
+                        crx_zip_offset = 12 + header_len
+        except Exception:
+            pass
+
+        try:
+            if is_crx and crx_zip_offset > 0:
+                with open(archive_path, "rb") as f:
+                    f.seek(crx_zip_offset)
+                    zip_bytes = f.read()
+                zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+            else:
+                zf = zipfile.ZipFile(archive_path)
+
+            file_size = archive_path.stat().st_size
+            total_uncompressed = sum(info.file_size for info in zf.infolist())
+            ratio = (total_uncompressed / max(1, file_size))
+            if ratio > 100 and total_uncompressed > 50 * 1024 * 1024:
+                raise ValueError(f"Zip bomb detected: expansion ratio {ratio:.1f}x exceeds safety threshold of 100x")
+
+            count = 0
+            for info in zf.infolist():
+                if info.is_dir() or count >= 150:
+                    continue
+                name = Path(info.filename).name
+                lower = info.filename.lower()
+                families = []
+                if "manifest.json" in lower or "package.json" in lower or "manifest.mf" in lower:
+                    families = ["manifest", "configuration"]
+                elif lower.endswith((".dylib", ".so", ".dll", ".node")):
+                    families = ["dynamic_library", "native"]
+                elif lower.endswith(".class"):
+                    families = ["jvm", "bytecode"]
+                elif lower.endswith(".js"):
+                    families = ["javascript"]
+                elif "boot-inf/classes" in lower:
+                    families = ["spring_boot", "jvm"]
+
+                if families or count < 20:
+                    child = ArtifactNode(
+                        id=f"{root_node.id}:entry:{count}",
+                        parent_id=root_node.id,
+                        name=name or info.filename,
+                        size=info.file_size,
+                        families=families or ["archive_entry"],
+                        custom_metadata={"archive_path": info.filename, "compressed_size": info.compress_size},
+                    )
+                    if info.file_size < 65536:
+                        try:
+                            content = zf.read(info.filename)
+                            tree.add_node(child, content=content)
+                        except Exception:
+                            tree.add_node(child)
+                    else:
+                        tree.add_node(child)
+                    extracted.append(child)
+                    count += 1
+        except Exception:
+            pass
+
+        return extracted

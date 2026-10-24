@@ -63,3 +63,16 @@ class BaseReEngine(ABC):
             "memory_view_unreliable": False,
             "discrepancies": [],
         }
+
+    def inspect_binary_structure(
+        self,
+        session_id: str,
+        scope: str = "all",
+        query: Optional[str] = None,
+        limit: int = 100
+    ) -> Dict[str, Any]:
+        """Inspects structural binary layout (headers, segments, sections, dependencies, symbols, encryption)."""
+        return {
+            "status": "error",
+            "message": "inspect_binary_structure not implemented for this engine",
+        }

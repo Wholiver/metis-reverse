@@ -1,18 +1,20 @@
 # Metis Reverse MCP: Complete Tools Catalog & Schemas
 
-This document is the authoritative schema reference for all **24 task-level MCP tools** exposed by `MetisToolDispatcher`. Every tool is engineered for autonomous AI Agent reasoning, triple-coordinate provenance (`{va, rva, file_offset}`), prompt-injection defense (`PromptShield`), polyglot container navigation, and deterministic degradation.
+This document is the authoritative schema reference for all **29 task-level MCP tools** exposed by `MetisToolDispatcher`. Every tool is engineered for autonomous AI Agent reasoning, triple-coordinate provenance (`{va, rva, file_offset}`), prompt-injection defense (`PromptShield`), polyglot container navigation, and deterministic degradation.
 
 ---
 
 ## Table of Contents
 
-- [1. Session & Artifact Topology (6 Tools)](#1-session--artifact-topology-6-tools)
+- [1. Session & Artifact Topology (8 Tools)](#1-session--artifact-topology-8-tools)
+  - [`re_inspect`](#10-re_inspect)
   - [`re_session_manager`](#11-re_session_manager)
   - [`re_triage`](#12-re_triage)
   - [`re_tree_status`](#13-re_tree_status)
   - [`re_list_artifacts`](#14-re_list_artifacts)
   - [`re_inspect_artifact`](#15-re_inspect_artifact)
   - [`re_capabilities`](#16-re_capabilities)
+  - [`re_inspect_binary_structure`](#17-re_inspect_binary_structure)
 - [2. Physical Slicing & Coordinate Translation (2 Tools)](#2-physical-slicing--coordinate-translation-2-tools)
   - [`re_read_file_range`](#21-re_read_file_range)
   - [`re_translate_address`](#22-re_translate_address)
@@ -44,7 +46,41 @@ This document is the authoritative schema reference for all **24 task-level MCP 
 
 ---
 
-## 1. Session & Artifact Topology (6 Tools)
+## 1. Session & Artifact Topology (8 Tools)
+
+### 1.0 `re_inspect`
+Universal panoramic inspection tool for all software forms and languages. Directly accepts directories (`.app`), packages (`.crx`, `.vsix`, `.whl`, `.jar`), single files, bytecodes, or embedded databases. Automatically builds or navigates the artifact tree, detects polyglot labels, extracts deep language structures without external decompilers, and prescribes next-step tools.
+
+| Parameter | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `target_path_or_artifact` | `string` | **Yes** | - | Path to file, directory, bundle (`.app`), archive, or artifact node ID |
+| `session_id` | `string` | No | - | Optional session ID (if omitted, automatically created or re-used) |
+| `query_or_focus` | `string` | No | - | Specific focus area (e.g. "modules", "classes", "schemas", "crypto") |
+
+**Example Request**:
+```json
+{
+  "target_path_or_artifact": "/Applications/Sample.app"
+}
+```
+
+**Example Response**:
+```json
+{
+  "status": "success",
+  "session_id": "auto_f38a...",
+  "target": "/Applications/Sample.app",
+  "artifact_name": "Sample.app",
+  "families": ["macos_app", "bundle", "directory"],
+  "sub_artifacts_count": 8,
+  "deep_analysis": {
+    "macos_bundle_info": {"CFBundleIdentifier": "com.sample.app", "CFBundleExecutable": "Sample"},
+    "sqlite": {"is_sqlite": true, "tables": ["user_data", "config"]}
+  },
+  "recommended_next_tools": ["re_tree_status", "re_inspect_artifact", "re_query_function"],
+  "instructions": "This MCP is the primary reverse engineering and code extraction engine for all formats. Do not bypass metis to call raw shell tools (strings/objdump/unzip/grep)."
+}
+```
 
 ### 1.1 `re_session_manager`
 Manages headless reverse-engineering sessions, read-only sample mounting, polyglot `ArtifactTree` construction (including automatic Bun standalone container extraction), and `.metis_sidecars/` export/import.
@@ -230,6 +266,32 @@ Explicitly declares supported capabilities, degraded operations, and fallback pa
     "sandbox_probing": "supported"
   },
   "is_activated": true
+}
+```
+
+### 1.7 `re_inspect_binary_structure`
+Inspects structural binary layout (headers, segments, sections, dependencies/dylibs, imported/exported symbols, encryption info/LC_ENCRYPTION_INFO). Use this instead of terminal commands like `otool`, `readelf`, or ad-hoc scripts.
+
+| Parameter | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `session_id` | `string` | **Yes** | - | Active session ID |
+| `scope` | `string` | No | `"all"` | Scope: `"all"`, `"headers"`, `"segments"`, `"sections"`, `"dependencies"`, `"symbols"`, `"encryption"` |
+| `query` | `string` | No | - | Optional substring filter for symbol, section, or dependency names |
+| `limit` | `integer` | No | `100` | Maximum number of symbols to return |
+
+**Example Response**:
+```json
+{
+  "status": "success",
+  "scope": "all",
+  "segments": [
+    {"name": "__TEXT", "vm_address": "0x100000000", "vm_size": 24576, "file_offset": 0, "file_size": 24576}
+  ],
+  "sections": [
+    {"name": "__text", "virtual_address": "0x100000960", "size": 18432, "file_offset": 2400}
+  ],
+  "dependencies": ["/usr/lib/libSystem.B.dylib"],
+  "symbols_count": 42
 }
 ```
 

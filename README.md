@@ -83,7 +83,7 @@ pip install -e .
 
 ## 配套逆向专家 Skill
 
-项目在 [`skills/metis-reverse/SKILL.md`](skills/metis-reverse/SKILL.md) 中提供了工业级逆向 Agent 认知飞轮指令，可直接供 Claude Code 或 Antigravity 挂载使用，驱动智能体按照“初筛 -> 假设 -> 沙箱自验 -> 仿真比对 -> 侧车沉淀 -> 证据闭环”的标准工程流程自主逆向。
+项目在 [`skills/metis-reverse-mcp/SKILL.md`](skills/metis-reverse-mcp/SKILL.md) 中提供了工业级逆向 Agent 认知飞轮指令，可直接供 Claude Code 或 Antigravity 挂载使用，驱动智能体按照“初筛 -> 假设 -> 沙箱自验 -> 仿真比对 -> 侧车沉淀 -> 证据闭环”的标准工程流程自主逆向。
 
 ---
 

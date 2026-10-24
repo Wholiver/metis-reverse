@@ -30,6 +30,30 @@ except ImportError:
     lief = None
 
 # Safe helper functions made available in the sandbox namespace
+SAFE_MODULES = {
+    "hashlib": hashlib,
+    "struct": struct,
+    "binascii": binascii,
+    "zlib": zlib,
+    "math": math,
+    "re": re,
+    "json": json,
+    "base64": base64,
+    "capstone": capstone,
+    "lief": lief,
+}
+
+def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    root_name = name.split(".")[0]
+    if root_name in SAFE_MODULES and SAFE_MODULES[root_name] is not None:
+        return sys.modules.get(name, SAFE_MODULES[root_name])
+    allowed = ", ".join(sorted(k for k, v in SAFE_MODULES.items() if v is not None))
+    raise ImportError(
+        f"Importing '{name}' is disabled in sandbox. "
+        f"Allowed pre-injected modules: {allowed}. "
+        f"System, network, file I/O and process execution modules are strictly restricted."
+    )
+
 def ror(val: int, r: int, bits: int = 32) -> int:
     mask = (1 << bits) - 1
     val &= mask
@@ -113,6 +137,7 @@ SAFE_BUILTINS = {
     "TypeError": TypeError,
     "KeyError": KeyError,
     "IndexError": IndexError,
+    "__import__": safe_import,
 }
 
 class HypothesisSandbox:
@@ -136,9 +161,17 @@ class HypothesisSandbox:
         start_time = time.time()
         stdout_capture = io.StringIO()
 
+        def safe_print(*args, **kwargs):
+            sep = kwargs.get("sep", " ")
+            end = kwargs.get("end", "\n")
+            stdout_capture.write(sep.join(str(a) for a in args) + end)
+
+        sandboxed_builtins = dict(SAFE_BUILTINS)
+        sandboxed_builtins["print"] = safe_print
+
         # Build sandboxed globals
         sandbox_globals = {
-            "__builtins__": SAFE_BUILTINS,
+            "__builtins__": sandboxed_builtins,
             "hashlib": hashlib,
             "struct": struct,
             "binascii": binascii,
@@ -177,8 +210,6 @@ class HypothesisSandbox:
         thread_locals = {}
 
         def _runner():
-            old_stdout = sys.stdout
-            sys.stdout = stdout_capture
             try:
                 exec(script_code, sandbox_globals, thread_locals)
                 # If script defines a verify() or decrypt() callable, call it
@@ -188,8 +219,6 @@ class HypothesisSandbox:
                     thread_locals["result"] = thread_locals["decrypt"](memory_slice)
             except Exception as e:
                 thread_exception.append((e, traceback.format_exc()))
-            finally:
-                sys.stdout = old_stdout
 
         worker = threading.Thread(target=_runner)
         worker.daemon = True
@@ -268,12 +297,12 @@ class HypothesisSandbox:
         stdout_capture = io.StringIO()
         registered_children: List[Dict[str, Any]] = []
 
-        MAX_ARTIFACT_SIZE_BYTES = 50 * 1024 * 1024 # 50MB per R6
+        MAX_ARTIFACT_SIZE_BYTES = 4 * 1024 * 1024 * 1024 # 4GB+ limit (streaming/mmap enabled per R6)
 
         def _safe_register(offset: int, length: int, data: bytes, name: str = "", description: str = ""):
             eff_len = length or len(data)
             if eff_len > MAX_ARTIFACT_SIZE_BYTES:
-                raise ValueError(f"Artifact size ({eff_len} bytes) exceeds safety limit of 50MB (R6 DoS protection)")
+                raise ValueError(f"Artifact size ({eff_len} bytes) exceeds safety limit of 4GB (R6 DoS protection)")
             
             # Prevent path traversal in registered child artifact names
             if ".." in name or "/" in name or "\\" in name:
@@ -308,9 +337,13 @@ class HypothesisSandbox:
             "safe_xor": safe_xor,
             "safe_rc4": safe_rc4,
             "artifact_id": artifact_id,
+            "read_file": read_file_func or (lambda off, sz: b""),
             "read_file_range": read_file_func or (lambda off, sz: b""),
             "read_memory": read_mem_func or (lambda va, sz: b""),
             "register_child": _safe_register,
+            "binary_path": "",
+            "session_path": "",
+            "target_binary": None,
         }
         if custom_vars:
             probe_globals.update(custom_vars)

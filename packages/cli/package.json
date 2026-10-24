@@ -1,0 +1,41 @@
+{
+  "name": "metis-reverse-cli",
+  "version": "1.0.0",
+  "description": "One-click multi-agent setup, doctor & uninstall CLI for Metis Reverse",
+  "license": "Apache-2.0",
+  "author": "Metis Reverse Authors",
+  "bin": {
+    "metis": "./bin/metis.js",
+    "metis-reverse": "./bin/metis.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "picocolors": "^1.1.1"
+  },
+  "scripts": {
+    "test": "node --test tests/**/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wholiver/metis-reverse.git",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "mcp",
+    "metis-reverse",
+    "reverse-engineering",
+    "cursor",
+    "claude",
+    "antigravity",
+    "agents"
+  ]
+}

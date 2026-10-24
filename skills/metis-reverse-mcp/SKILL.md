@@ -1,8 +1,10 @@
 ---
-name: metis-reverse-mcp
-description: High-fidelity AI-assisted deterministic reverse engineering with Metis Reverse MCP. Autonomous binary analysis, multi-architecture decompilation, polyglot container unpacking, cross-language bridge mapping, hypothesis verification, micro-emulation, deobfuscation, sidecar model refinement, and cross-patch knowledge transfer. Covers ELF, Mach-O, PE, Bun standalone bundles, Electron ASAR, Android APK/DEX, .NET CIL, Go, Rust, Python/PyInstaller, Lua, Wasm, and firmware containers.
+name: metis-reverse
+aliases:
+  - metis-reverse-mcp
+description: High-fidelity AI-assisted deterministic reverse engineering with Metis Reverse MCP (metis-reverse-mcp). Autonomous binary analysis, multi-architecture decompilation, polyglot container unpacking, cross-language bridge mapping, hypothesis verification, micro-emulation, deobfuscation, sidecar model refinement, and cross-patch knowledge transfer. Covers ELF, Mach-O, PE, Bun standalone bundles, Electron ASAR, Android APK/DEX, .NET CIL, Go, Rust, Python/PyInstaller, Lua, Wasm, and firmware containers.
 metadata:
-  version: "0.3.0"
+  version: "1.0.0"
   surfaces:
     - ide
     - chat
@@ -53,21 +55,33 @@ Every analysis step and final conclusion MUST unconditionally obey these five ru
 - **Never Misrepresent Assembly Synthesis**: When Ghidra Headless (`12.1.1+`), `ilspycmd`, or `jadx` is unavailable, Metis falls back to `NativeEngine` (`native_capstone_synthesis`). State clearly that analysis is based on Capstone disassembly synthesis and side-by-side instruction inspection rather than AST C pseudocode.
 - **Guide or Execute Dependency Setup When Needed**: Whenever missing local dependencies (`lief`, `capstone`, `Ghidra`, `JDK 21`, `ilspycmd`, `jadx`, `unblob`) limit analysis fidelity, proactively offer to install and configure them (or execute the setup steps in **Section 4** with user approval) so the session upgrades from Degraded Mode to Full Tier-1 AST Decompilation.
 
+### Rule 6: Strict MCP Tool Discipline (Zero Terminal Bypassing & Omnipresent Engine)
+- **Mandatory MCP Engine Usage**: Metis Reverse MCP is the authoritative, zero-friction, full-language and multi-format reverse engineering engine (supporting native binaries, macOS/iOS `.app` bundles, packages `.crx`/`.vsix`/`.whl`/`.jar`, JVM `.class`, VM bytecodes Hermes/QuickJS/Ruby/BEAM, game engines Godot/Unity/Unreal, GPU shaders Metal/SPIR-V/DXBC, kernel modules eBPF/.sys/.kext, and databases `.sqlite`/LevelDB).
+- **Strictly Prohibited Raw Shell Commands**: 凡涉及文件结构、代码提取、字节码、二进制或包解构，**严禁跳过 `metis` 去调用原生 shell 的 `strings/objdump/otool/unzip/grep`**。
+- **Universal Panoramic Entry (`re_inspect`)**: Always start unknown targets with `re_inspect(target_path_or_artifact, query_or_focus)`. It autonomously constructs the artifact tree, runs multi-label detection, extracts deep structural models, and prescribes next-step tools.
+- **Zero-Friction Calling**: All tools accept `file_path` or `artifact_id` directly without requiring prior manual `re_session_manager(action="open")`; sessions are automatically initialized, cached, or re-used under the hood.
+- **Never Run Ad-Hoc Reversing in Terminal**: Do NOT use `run_terminal_command` to execute ad-hoc Python reversing scripts (e.g. `.venv/bin/python - <<'EOF' import lief...`), `otool`, `objdump`, `readelf`, or `strings` against mounted target binaries.
+- **Use `re_inspect_binary_structure`**: For all structural layout inspection (segments, sections, dependencies/dylibs, imported/exported symbols, and `LC_ENCRYPTION_INFO` encryption status), call `re_inspect_binary_structure`.
+- **Use `re_run_probe_script` for Custom Probing**: When custom algorithmic unpacking or byte transformation is needed, run inside `re_run_probe_script`. The sandbox pre-injects `lief`, `capstone`, `target_binary`, `binary_path`, `session_path`, and helper I/O (`read_file_range`, `read_memory`). Whitelisted modules (`json`, `struct`, `math`, `hashlib`, `lief`, `capstone`) can be imported directly inside the sandbox without error.
+- **Terminal Isolation**: Terminal access is strictly reserved for environmental prerequisite checks (e.g. verifying Ghidra installation) or building/running downstream verification tests.
+
 ---
 
 ## 2. Tool Landscape & Decision Router
 
-Metis Reverse exposes **24 task-level MCP tools** organized into 8 functional domains:
+Metis Reverse exposes **29 task-level MCP tools** organized into 8 functional domains:
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         Metis Reverse MCP (24 Tools)                         │
+│                         Metis Reverse MCP (29 Tools)                         │
 ├──────────────────────────────────┬───────────────────────────────────────────┤
-│ 1. Session & Artifact Topology   │ re_session_manager, re_triage,            │
-│    (6 tools)                     │ re_tree_status, re_list_artifacts,        │
+│ 1. Universal & Artifact Topology │ re_inspect (Omni Entry),                  │
+│    (8 tools)                     │ re_session_manager, re_triage,            │
+│                                  │ re_inspect_binary_structure,              │
+│                                  │ re_tree_status, re_list_artifacts,        │
 │                                  │ re_inspect_artifact, re_capabilities      │
 ├──────────────────────────────────┼───────────────────────────────────────────┤
-│ 2. Physical Slicing & Coords     │ re_read_file_range,                       │
+│ 2. Physical Slicing & Coords     │ re_read_file_range (Streamed 4GB+ / 64KB),│
 │    (2 tools)                     │ re_translate_address                      │
 ├──────────────────────────────────┼───────────────────────────────────────────┤
 │ 3. Decompilation & Call Graph    │ re_query_function,                        │
@@ -96,9 +110,13 @@ Metis Reverse exposes **24 task-level MCP tools** organized into 8 functional do
 ```text
 Incoming Reverse Engineering Task
   │
-  ├─► [Step 1: Initialize & Triage]
-  │     ├── re_session_manager(action="open", file_path="...")
+  ├─► [Universal Zero-Friction Entry]
+  │     └── re_inspect(target_path_or_artifact="...")  ──► Auto-detect, build tree, extract deep models
+  │
+  ├─► [Traditional Triage & Topology]
+  │     ├── re_session_manager(action="open", file_path="...") [Implicit or Explicit]
   │     ├── re_triage(file_path="...")  ──► Check format, entropy, & memory_view_unreliable
+  │     ├── re_inspect_binary_structure(session_id="...", scope="all") ──► Segments, sections, dylibs, symbols, encryption
   │     └── re_tree_status(session_id="...") & re_capabilities(session_id="...")
   │
   ├─► Is the target a Polyglot / Container bundle (Bun / Electron ASAR / PyInstaller / APK)?

@@ -25,7 +25,7 @@ class MetisMCPServer:
         },
         "metis://docs/tools-catalog": {
             "name": "Metis Reverse Tools Catalog & Schemas",
-            "description": "Detailed schemas, parameter definitions and JSON examples for all 27 MCP tools",
+            "description": "Detailed schemas, parameter definitions and JSON examples for all 29 MCP tools",
             "mimeType": "text/markdown",
             "rel_path": "references/tools-catalog-and-schemas.md",
         },
@@ -117,7 +117,11 @@ class MetisMCPServer:
             tool_name = params.get("name")
             tool_args = params.get("arguments", {})
 
-            result = self.dispatcher.dispatch(tool_name, tool_args)
+            try:
+                result = self.dispatcher.dispatch(tool_name, tool_args)
+            except Exception as e:
+                logger.exception(f"Unhandled tool execution error in {tool_name}: {e}")
+                result = {"status": "error", "error": f"Tool execution failed: {str(e)}"}
             is_error = result.get("status") == "error"
 
             return {
@@ -298,12 +302,18 @@ class MetisMCPServer:
     def run_stdio(self) -> None:
         """Main stdio loop."""
         logger.info("Metis Reverse MCP server started on stdio.")
-        for line in sys.stdin:
+        while True:
+            line = sys.stdin.readline()
+            if not line:
+                break
             line = line.strip()
             if not line:
                 continue
+            req_id = None
             try:
                 request = json.loads(line)
+                if isinstance(request, dict):
+                    req_id = request.get("id")
                 response = self.handle_request(request)
                 if response is not None:
                     sys.stdout.write(json.dumps(response) + "\n")
@@ -312,10 +322,10 @@ class MetisMCPServer:
                 logger.error(f"Error handling line: {e}")
                 err_resp = {
                     "jsonrpc": "2.0",
-                    "id": None,
+                    "id": req_id,
                     "error": {
-                        "code": -32700,
-                        "message": f"Parse error: {str(e)}"
+                        "code": -32603,
+                        "message": f"Internal RPC error: {str(e)}"
                     }
                 }
                 sys.stdout.write(json.dumps(err_resp) + "\n")

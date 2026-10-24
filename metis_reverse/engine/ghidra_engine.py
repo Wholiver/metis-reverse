@@ -7,6 +7,7 @@ import tempfile
 import hashlib
 import platform
 import warnings
+import bisect
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -94,16 +95,20 @@ class GhidraHeadlessEngine(BaseReEngine):
             pass
 
         # Extract sections and segments data
+        slice_base_offset = getattr(parsed, "fat_offset", 0) or 0
         sections_data = []
         segments_data = []
         if parsed and hasattr(parsed, "sections"):
             for s in parsed.sections:
                 flags_str = str(getattr(s, "flags", "")).upper()
                 is_exec = (s.name in ("__text", ".text", "__stubs", "__auth_stubs", ".plt")) or ("INSTRUCTIONS" in flags_str)
+                s_off = getattr(s, "offset", getattr(s, "pointerto_raw_data", 0))
+                physical_sec_off = slice_base_offset + s_off
                 sections_data.append({
                     "name": s.name,
                     "virtual_address": s.virtual_address,
                     "size": s.size,
+                    "file_offset": physical_sec_off,
                     "content": bytes(s.content),
                     "is_executable": is_exec,
                 })
@@ -115,7 +120,8 @@ class GhidraHeadlessEngine(BaseReEngine):
                 vmsize = getattr(seg, "virtual_size", 0)
                 fileoff = getattr(seg, "file_offset", 0)
                 filesize = getattr(seg, "file_size", getattr(seg, "physical_size", 0))
-                seg_content = raw_bytes[fileoff:fileoff + filesize] if fileoff + filesize <= len(raw_bytes) else b""
+                physical_fileoff = slice_base_offset + fileoff
+                seg_content = raw_bytes[physical_fileoff:physical_fileoff + filesize] if physical_fileoff + filesize <= len(raw_bytes) else b""
                 is_exec = False
                 if hasattr(seg, "flags"):
                     is_exec = "EXECUTE" in str(seg.flags).upper() or "INSTRUCTIONS" in str(seg.flags).upper()
@@ -123,7 +129,7 @@ class GhidraHeadlessEngine(BaseReEngine):
                     "name": seg_name,
                     "virtual_address": vmaddr,
                     "virtual_size": vmsize,
-                    "file_offset": fileoff,
+                    "file_offset": physical_fileoff,
                     "file_size": filesize,
                     "content": seg_content,
                     "is_executable": is_exec,
@@ -131,11 +137,12 @@ class GhidraHeadlessEngine(BaseReEngine):
         elif parsed and hasattr(parsed, "sections"):
             for s in parsed.sections:
                 fo = getattr(s, "offset", getattr(s, "pointerto_raw_data", 0))
+                physical_fo = slice_base_offset + fo
                 segments_data.append({
                     "name": s.name,
                     "virtual_address": s.virtual_address,
                     "virtual_size": s.size,
-                    "file_offset": fo,
+                    "file_offset": physical_fo,
                     "file_size": s.size,
                     "content": bytes(s.content),
                     "is_executable": (s.name in ("__text", ".text")) or ("EXECUTE" in str(getattr(s, "flags", "")).upper()),
@@ -309,12 +316,13 @@ class GhidraHeadlessEngine(BaseReEngine):
                 except Exception:
                     pass
 
-        # Compute accurate boundaries and sizes for all discovered functions
+        # Compute accurate boundaries and sizes for all discovered functions (O(N) with dict lookup)
         fn_vas = sorted(list(set(int(f["va"], 16) for f in functions_list)))
+        va_to_idx = {va: i for i, va in enumerate(fn_vas)}
         for f_meta in functions_list:
             f_va_int = int(f_meta["va"], 16)
-            idx = fn_vas.index(f_va_int)
-            next_f_va = fn_vas[idx + 1] if idx + 1 < len(fn_vas) else None
+            idx = va_to_idx.get(f_va_int, -1)
+            next_f_va = fn_vas[idx + 1] if idx != -1 and idx + 1 < len(fn_vas) else None
 
             sec_end = f_va_int + 4096
             for s in sections_data:
@@ -325,16 +333,27 @@ class GhidraHeadlessEngine(BaseReEngine):
             f_meta["size"] = max(f_meta.get("size", 0), calc_end - f_va_int)
             f_meta["end_va"] = calc_end
 
-        # Pre-scan callers across executable code sections
+        # Pre-scan callers across executable code sections using bisect (O(log N))
         callers_by_va: Dict[str, List[Dict[str, Any]]] = {}
-        if HAS_CAPSTONE:
+        if HAS_CAPSTONE and functions_list:
+            fn_intervals = sorted(
+                [(int(f["va"], 16), f.get("end_va", int(f["va"], 16) + f.get("size", 256)), f) for f in functions_list],
+                key=lambda x: x[0]
+            )
+            fn_starts = [item[0] for item in fn_intervals]
+
             cs_scan_arch = capstone.CS_ARCH_ARM64 if "ARM64" in arch_str.upper() else capstone.CS_ARCH_X86
             cs_scan_mode = capstone.CS_MODE_ARM if "ARM64" in arch_str.upper() else (capstone.CS_MODE_64 if "64" in arch_str else capstone.CS_MODE_32)
             try:
                 md_scan = capstone.Cs(cs_scan_arch, cs_scan_mode)
+                max_insns = 250000
+                insn_count = 0
                 for s in sections_data:
                     if s["is_executable"]:
                         for insn in md_scan.disasm(s["content"], s["virtual_address"]):
+                            insn_count += 1
+                            if insn_count > max_insns:
+                                break
                             is_call = False
                             clean = insn.op_str.strip().lstrip("#")
                             try:
@@ -348,24 +367,21 @@ class GhidraHeadlessEngine(BaseReEngine):
                                 if insn.mnemonic in ("bl", "call"):
                                     is_call = True
                                 elif insn.mnemonic in ("b", "jmp"):
-                                    # Must not be an intra-function branch/loop
-                                    caller_f = None
-                                    for f in functions_list:
-                                        c_s = int(f["va"], 16)
-                                        c_e = f.get("end_va", c_s + f.get("size", 256))
+                                    # Must not be an intra-function branch/loop: use bisect O(log N) instead of O(N) linear scan
+                                    b_idx = bisect.bisect_right(fn_starts, insn.address) - 1
+                                    if b_idx >= 0:
+                                        c_s, c_e, _ = fn_intervals[b_idx]
                                         if c_s <= insn.address < c_e:
-                                            caller_f = f
-                                            break
-                                    if caller_f:
-                                        c_s = int(caller_f["va"], 16)
-                                        c_e = caller_f.get("end_va", c_s + caller_f.get("size", 256))
-                                        if (t_va < c_s or t_va >= c_e) and (t_hex in symbols_by_va or t_hex in functions_by_va):
-                                            is_call = True
+                                            if (t_va < c_s or t_va >= c_e) and (t_hex in symbols_by_va or t_hex in functions_by_va):
+                                                is_call = True
 
                                 if is_call:
                                     if t_hex not in callers_by_va:
                                         callers_by_va[t_hex] = []
-                                    callers_by_va[t_hex].append({"va": hex(insn.address)})
+                                    if len(callers_by_va[t_hex]) < 50:
+                                        callers_by_va[t_hex].append({"va": hex(insn.address)})
+                        if insn_count > max_insns:
+                            break
             except Exception:
                 pass
 
@@ -391,6 +407,7 @@ class GhidraHeadlessEngine(BaseReEngine):
             "callers_by_va": callers_by_va,
             "proj_dir": temp_proj_dir,
             "has_native_ghidra": launcher is not None,
+            "parsed": parsed,
             "memory_map": {},
         }
         self._active_sessions[session_id] = session_info
@@ -922,3 +939,16 @@ class GhidraHeadlessEngine(BaseReEngine):
             "memory_view_unreliable": bool(discrepancies),
             "discrepancies": discrepancies,
         }
+
+    def inspect_binary_structure(
+        self,
+        session_id: str,
+        scope: str = "all",
+        query: Optional[str] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        sess = self._active_sessions.get(session_id)
+        if not sess:
+            raise KeyError(f"Session {session_id} not found")
+        from ..services.structure_service import StructureService
+        return StructureService.inspect(sess, scope=scope, query=query, limit=limit)

@@ -5,6 +5,8 @@ specifically for AI reasoning, evidence provenance, and prompt injection defense
 """
 
 import json
+import base64
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -68,13 +70,24 @@ class MetisToolDispatcher:
         """Returns schemas for the 9 task-level tools."""
         return [
             {
+                "name": "re_inspect",
+                "description": "Primary universal entry point for all software forms and languages (binaries, directories/.app, bytecode, scripts, containers, databases, shaders). Automatically mounts sessions, builds artifact trees, identifies polyglot families, and returns core structures with next-step tool recommendations. Strictly prefer this over raw shell commands (strings/objdump/unzip/grep).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "target_path_or_artifact": {"type": "string", "description": "Path to binary, application package (.app), directory, archive, or artifact ID"},
+                        "query_or_focus": {"type": "string", "description": "Optional focus area (e.g. 'structure', 'symbols', 'schemas', 'bytecode', 'crypto')"}
+                    }
+                }
+            },
+            {
                 "name": "re_session_manager",
-                "description": "Manages headless reverse-engineering sessions, read-only sample mounting, snapshots, and sidecar export/import.",
+                "description": "Manages reverse-engineering sessions, read-only sample/directory mounting (.app, directories, archives, binaries), snapshots, and sidecar export/import.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": {"type": "string", "enum": ["open", "close", "list", "status", "export_sidecar", "import_sidecar"], "description": "Action to perform"},
-                        "file_path": {"type": "string", "description": "Path to binary file (for 'open')"},
+                        "file_path": {"type": "string", "description": "Path to binary file or directory bundle (for 'open')"},
                         "session_id": {"type": "string", "description": "Session identifier"},
                         "format": {"type": "string", "enum": ["yaml", "json"], "default": "yaml"}
                     },
@@ -83,7 +96,7 @@ class MetisToolDispatcher:
             },
             {
                 "name": "re_triage",
-                "description": "Performs initial triage, file format detection, section entropy heatmaps, packer recognition, and domain-aware tool exit code parsing (e.g. YARA/DIE).",
+                "description": "Performs initial triage on binaries, directory bundles (.app), or archives, format detection, section entropy heatmaps, packer recognition, and domain tool parsing (YARA/DIE).",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -284,6 +297,25 @@ class MetisToolDispatcher:
                 }
             },
             {
+                "name": "re_inspect_binary_structure",
+                "description": "Inspects structural binary layout (headers, segments, sections, dependencies/dylibs, imported/exported symbols, encryption info/LC_ENCRYPTION_INFO). Use this instead of terminal commands like otool, readelf, or ad-hoc lief scripts.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {"type": "string", "description": "Active session ID"},
+                        "scope": {
+                            "type": "string",
+                            "enum": ["all", "headers", "segments", "sections", "dependencies", "symbols", "encryption"],
+                            "default": "all",
+                            "description": "Scope of structural inspection"
+                        },
+                        "query": {"type": "string", "description": "Optional substring filter for symbol, section, or dependency names"},
+                        "limit": {"type": "integer", "default": 100, "description": "Maximum number of symbols to return"}
+                    },
+                    "required": ["session_id"]
+                }
+            },
+            {
                 "name": "re_register_child_artifact",
                 "description": "Dynamically mounts a child artifact slice into the Artifact Tree (P0-2, Escape Hatch 1).",
                 "inputSchema": {
@@ -448,7 +480,24 @@ class MetisToolDispatcher:
         method_name = f"handle_{tool_name}"
         handler = getattr(self, method_name, None)
         if not handler:
-            return {"status": "error", "error": f"Unknown tool: {tool_name}"}
+            # Check legacy / convenience aliases
+            aliases = {
+                "open_session": lambda a: self.handle_re_session_manager({"action": "open", **a}),
+                "close_session": lambda a: self.handle_re_session_manager({"action": "close", **a}),
+                "query_evidence": self.handle_re_query_evidence,
+                "inspect_artifact": self.handle_re_inspect_artifact,
+                "inspect_binary_structure": self.handle_re_inspect_binary_structure,
+                "inspect_structure": self.handle_re_inspect_binary_structure,
+                "binary_structure": self.handle_re_inspect_binary_structure,
+                "decompile": self.handle_re_decompile_function,
+                "analyze_function": self.handle_re_query_function,
+                "inspect": self.handle_re_inspect,
+                "re_inspect": self.handle_re_inspect,
+            }
+            if tool_name in aliases:
+                handler = aliases[tool_name]
+            else:
+                return {"status": "error", "error": f"Unknown tool: {tool_name}"}
         try:
             return handler(args)
         except Exception as e:
@@ -463,33 +512,59 @@ class MetisToolDispatcher:
             file_path = args.get("file_path")
             if not file_path:
                 return {"status": "error", "message": "file_path is required for 'open'"}
-            res = self.engine.open_session(file_path, session_id)
-            sha = res.get("sample_sha256", "")
-            sidecar = self.sidecar_store.get_or_create(sha, Path(file_path).name)
+            p = Path(file_path).resolve()
+            tree = None
+            root_node = None
+            res = {}
+            sha = ""
+            if p.exists():
+                tree = ArtifactTree.build_tree_from_path(str(p))
+                root_node = tree.get_node("root")
+                if p.is_file():
+                    try:
+                        res = self.engine.open_session(str(p), session_id)
+                        sha = res.get("sample_sha256", "")
+                    except Exception:
+                        pass
+                elif p.is_dir():
+                    main_node = tree.get_node("root:main_exec")
+                    if main_node and main_node.file_path and Path(main_node.file_path).is_file():
+                        try:
+                            res = self.engine.open_session(main_node.file_path, session_id)
+                            sha = res.get("sample_sha256", "")
+                        except Exception:
+                            pass
+            else:
+                # Fallback for virtual or mock samples in test environments
+                try:
+                    res = self.engine.open_session(file_path, session_id)
+                    sha = res.get("sample_sha256", hashlib.sha256(file_path.encode()).hexdigest())
+                    tree = ArtifactTree()
+                    root_node = ArtifactNode(
+                        id="root",
+                        name=Path(file_path).name,
+                        file_path=file_path,
+                        size=1024,
+                        sha256=sha,
+                        families=["binary"],
+                        is_activated=True,
+                    )
+                    tree.add_node(root_node)
+                except Exception:
+                    return {"status": "error", "message": f"Path not found: {file_path}"}
 
-            # Build Artifact Tree & Polyglot Multi-Label metadata (P0-2, P0-3, P0-4)
-            tree = ArtifactTree(root_id="root")
-            raw_bytes = Path(file_path).read_bytes() if Path(file_path).is_file() else b""
-            labels = PolyglotDetector.detect_labels(raw_bytes)
-            caps = PolyglotDetector.get_capabilities(labels)
-            families = [l["name"].lower() for l in labels]
-            root_node = ArtifactNode(
-                id="root",
-                name=Path(file_path).name,
-                file_path=str(Path(file_path).absolute()),
-                file_offset=0,
-                size=len(raw_bytes),
-                sha256=sha,
-                families=families,
-                capabilities=caps,
-                is_activated=True,
-            )
-            tree.add_node(root_node, content=raw_bytes)
-            # Structured container parsing (Bun standalone modules, embedded native modules)
-            ContainerExtractor.extract_bun_standalone(raw_bytes, root_node, tree)
+            if not sha and root_node and root_node.sha256:
+                sha = root_node.sha256
+            if not sha:
+                sha = hashlib.sha256(p.name.encode()).hexdigest()
+
+            sidecar = self.sidecar_store.get_or_create(sha, p.name)
+
+            families = root_node.families if root_node else []
+            caps = root_node.capabilities if root_node else {}
 
             self._active_sessions[session_id] = {
-                "file_path": file_path,
+                "file_path": str(p),
                 "sha256": sha,
                 "sidecar": sidecar,
                 "artifact_tree": tree,
@@ -500,9 +575,9 @@ class MetisToolDispatcher:
                 "status": "ready",
                 "session_id": session_id,
                 "sample_sha256": sha,
-                "binary_path": file_path,
+                "binary_path": str(p),
                 "entrypoint": res.get("entrypoint", "0x0"),
-                "format": res.get("format", "Unknown"),
+                "format": res.get("format", "Directory Bundle" if p.is_dir() else "Unknown"),
                 "architecture": res.get("architecture", "Unknown"),
                 "function_count": res.get("function_count", 0),
                 "families": families,
@@ -614,7 +689,7 @@ class MetisToolDispatcher:
         return self.handle_re_query_function(args)
 
     def handle_re_query_function(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         va_or_name = args.get("va_or_name") or args.get("va") or args.get("name")
         max_tokens = args.get("max_tokens", 2048)
         include_libraries = bool(args.get("include_libraries", False))
@@ -703,8 +778,7 @@ class MetisToolDispatcher:
 
     # 4. re_hunt_crypto_and_hashes
     def handle_re_hunt_crypto_and_hashes(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
-        sess = self._active_sessions.get(session_id)
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         if not sess:
             return {"status": "error", "message": f"Session {session_id} not found"}
 
@@ -756,8 +830,8 @@ class MetisToolDispatcher:
                     except Exception:
                         pass
 
-        # 2. Constant & API hash scanning across functions
-        fn_list = self.engine.list_functions(session_id, limit=200).get("functions", [])
+        # 2. Constant & API hash scanning across functions (bounded to prevent MCP timeouts)
+        fn_list = self.engine.list_functions(session_id, limit=50).get("functions", [])
         for f_meta in fn_list:
             f_va = f_meta.get("va")
             if f_va and f_va not in constants_map:
@@ -833,7 +907,7 @@ class MetisToolDispatcher:
 
     # 5. re_verify_hypothesis
     def handle_re_verify_hypothesis(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         script_code = args.get("script_code")
         target_va = args.get("target_va")
         slice_size = args.get("slice_size", 64)
@@ -873,7 +947,7 @@ class MetisToolDispatcher:
 
     # 6. re_emulate_slice
     def handle_re_emulate_slice(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         start_va = args.get("start_va")
         stop_va = args.get("stop_va")
         initial_regs = args.get("initial_registers", {})
@@ -907,8 +981,7 @@ class MetisToolDispatcher:
 
     # 7. re_refine_model
     def handle_re_refine_model(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
-        sess = self._active_sessions.get(session_id)
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         if not sess:
             return {"status": "error", "message": f"Session {session_id} not found"}
 
@@ -1043,21 +1116,47 @@ class MetisToolDispatcher:
 
     # 9. re_query_evidence
     def handle_re_query_evidence(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        session_id = args.get("session_id")
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         query_target = args.get("query")
 
-        sess = self._active_sessions.get(session_id)
         sidecar_db = sess["sidecar"] if sess else None
 
         return self.evidence_service.query(query_target, session_id, sidecar_db=sidecar_db)
 
     def _resolve_session_and_tree(self, args: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[ArtifactTree], str, str]:
-        """Helper resolving session, tree, session_id, and artifact_id from args."""
+        """Helper resolving session, tree, session_id, and artifact_id from args with Zero-Friction auto-creation."""
         session_id = args.get("session_id")
         artifact_id = args.get("artifact_id", "root")
+        path_candidate = args.get("file_path") or args.get("target_path_or_artifact") or args.get("path") or args.get("target")
 
-        if not session_id and self._active_sessions:
-            session_id = next(iter(self._active_sessions))
+        # 1. If path candidate points to an existing file/dir on disk, mount or reuse session
+        if path_candidate and Path(path_candidate).exists():
+            resolved_p = str(Path(path_candidate).resolve())
+            for s_id, s_data in self._active_sessions.items():
+                if s_data.get("file_path") and str(Path(s_data["file_path"]).resolve()) == resolved_p:
+                    session_id = s_id
+                    break
+            if not session_id or session_id not in self._active_sessions:
+                auto_sess_id = f"auto_{hashlib.sha256(resolved_p.encode()).hexdigest()[:10]}"
+                self.handle_re_session_manager({"action": "open", "file_path": resolved_p, "session_id": auto_sess_id})
+                session_id = auto_sess_id
+
+        # 2. If session_id was passed as a path (common Agent habit)
+        elif session_id and Path(session_id).exists():
+            resolved_p = str(Path(session_id).resolve())
+            for s_id, s_data in self._active_sessions.items():
+                if s_data.get("file_path") and str(Path(s_data["file_path"]).resolve()) == resolved_p:
+                    session_id = s_id
+                    break
+            if session_id not in self._active_sessions:
+                auto_sess_id = f"auto_{hashlib.sha256(resolved_p.encode()).hexdigest()[:10]}"
+                self.handle_re_session_manager({"action": "open", "file_path": resolved_p, "session_id": auto_sess_id})
+                session_id = auto_sess_id
+
+        # 3. Fallback to first active session if available
+        if not session_id or session_id not in self._active_sessions:
+            if self._active_sessions:
+                session_id = next(iter(self._active_sessions))
 
         sess = self._active_sessions.get(session_id)
         tree = self.trees.get(session_id) if session_id else None
@@ -1065,29 +1164,124 @@ class MetisToolDispatcher:
             tree = sess["artifact_tree"]
 
         if not tree and sess and sess.get("file_path"):
-            # Synthesize fallback tree for active session
-            tree = ArtifactTree(root_id="root")
-            p = Path(sess["file_path"])
-            raw = p.read_bytes() if p.is_file() else b""
-            labels = PolyglotDetector.detect_labels(raw)
-            root_node = ArtifactNode(
-                id="root",
-                name=p.name,
-                file_path=str(p.absolute()),
-                file_offset=0,
-                size=len(raw),
-                sha256=sess.get("sha256", ""),
-                families=[l["name"].lower() for l in labels],
-                capabilities=PolyglotDetector.get_capabilities(labels),
-                is_activated=True,
-            )
-            tree.add_node(root_node, content=raw)
+            tree = ArtifactTree.build_tree_from_path(sess["file_path"])
             self.trees[session_id] = tree
             sess["artifact_tree"] = tree
 
         return sess, tree, session_id or "default_sess", artifact_id
 
-    # 10. re_capabilities
+    # 10. re_inspect (Universal Panoramic Inspection Entry)
+    def handle_re_inspect(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Universal panoramic inspection tool for all software forms and languages."""
+        target = args.get("target_path_or_artifact") or args.get("file_path") or args.get("artifact_id") or "root"
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
+        if not tree:
+            return {"status": "error", "message": f"Could not inspect target: '{target}'. Path does not exist or session unavailable."}
+
+        target_node = tree.get_node(target) or tree.get_node(artifact_id) or tree.get_node("root")
+        if not target_node:
+            return {"status": "error", "message": f"Artifact node '{target}' not found in artifact tree"}
+
+        header = tree.read_range(target_node.id, 0, 65536)
+        labels = PolyglotDetector.detect_labels(header)
+        caps = PolyglotDetector.get_capabilities(labels)
+
+        deep_analysis: Dict[str, Any] = {}
+        for l in labels:
+            lname = l["name"]
+            if lname in ("JavaClass", "Java"):
+                res = FamilyAdapters.analyze_jvm_android(header)
+                if res and not res.get("degraded_result"):
+                    deep_analysis["jvm"] = res
+            elif lname == "DEX":
+                res = FamilyAdapters.analyze_jvm_android(header)
+                if res:
+                    deep_analysis["dex"] = res
+            elif lname == "WebAssembly":
+                res = FamilyAdapters.analyze_wasm(header)
+                if res and not res.get("degraded_result"):
+                    deep_analysis["wasm"] = res
+            elif lname == "Go":
+                res = FamilyAdapters.analyze_go(header)
+                if res:
+                    deep_analysis["go"] = res
+            elif lname == "Rust":
+                res = FamilyAdapters.analyze_rust(header)
+                if res:
+                    deep_analysis["rust"] = res
+            elif lname == ".NET":
+                res = FamilyAdapters.analyze_dotnet(header)
+                if res:
+                    deep_analysis["dotnet"] = res
+            elif lname == "Hermes":
+                res = FamilyAdapters.analyze_hermes(header)
+                if res:
+                    deep_analysis["hermes"] = res
+            elif lname == "BEAM":
+                res = FamilyAdapters.analyze_erlang_beam(header)
+                if res:
+                    deep_analysis["erlang_beam"] = res
+            elif lname == "SQLite":
+                res = FamilyAdapters.analyze_sqlite(header, file_path=target_node.file_path)
+                if res:
+                    deep_analysis["sqlite"] = res
+            elif lname in ("Delphi", "DelphiDFM"):
+                res = FamilyAdapters.analyze_delphi_dfm(header)
+                if res:
+                    deep_analysis["delphi"] = res
+            elif lname in ("MetalShader", "SPIR-V", "DXBC"):
+                res = FamilyAdapters.analyze_gpu_shader(header)
+                if res:
+                    deep_analysis["gpu_shader"] = res
+            elif lname in ("GodotPCK", "UnityAssetBundle", "UnrealPAK"):
+                res = FamilyAdapters.analyze_game_engine(header)
+                if res:
+                    deep_analysis["game_engine"] = res
+
+        if header.startswith(b"\xaf\x1b\xb1\xfa") or "global-metadata" in target_node.name:
+            il2cpp_res = FamilyAdapters.analyze_il2cpp(header)
+            if il2cpp_res.get("is_il2cpp_metadata"):
+                deep_analysis["il2cpp"] = il2cpp_res
+
+        if target_node.custom_metadata.get("parsed_plist"):
+            deep_analysis["macos_bundle_info"] = target_node.custom_metadata["parsed_plist"]
+
+        next_tools = ["re_read_file_range"]
+        families = [l["name"] for l in labels]
+        if any(f in ("Mach-O", "ELF", "PE") for f in families):
+            next_tools.extend(["re_query_function", "re_hunt_crypto_and_hashes", "re_decompile_function"])
+        if any(f in ("JavaScript", "Bun", "ElectronAsar") for f in families):
+            next_tools.extend(["js_list_modules", "js_get_module", "js_search", "re_bridge_map"])
+        if "SQLite" in families:
+            next_tools.append("re_extract_schemas")
+        if any(f in ("macos_app", "bundle", "directory") for f in target_node.families):
+            next_tools.extend(["re_tree_status", "re_inspect_artifact"])
+
+        tree_summary = tree.summary_report()
+
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "target": target,
+            "artifact_id": target_node.id,
+            "artifact_name": target_node.name,
+            "file_size": target_node.size,
+            "families": target_node.families,
+            "detected_labels": labels,
+            "capabilities": caps,
+            "sub_artifacts_count": len(target_node.children),
+            "total_artifacts_in_tree": tree_summary["total_artifacts"],
+            "sub_artifacts": [
+                {"id": c_id, "name": tree.get_node(c_id).name, "families": tree.get_node(c_id).families, "size": tree.get_node(c_id).size}
+                for c_id in target_node.children[:30]
+                if tree.get_node(c_id)
+            ],
+            "deep_analysis": deep_analysis,
+            "recommended_next_tools": list(dict.fromkeys(next_tools)),
+            "instructions": "This MCP is the primary reverse engineering and code extraction engine for all formats. Do not bypass metis to call raw shell tools (strings/objdump/unzip/grep).",
+        }
+
+    # 11. re_capabilities
     def handle_re_capabilities(self, args: Dict[str, Any]) -> Dict[str, Any]:
         sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         if not tree:
@@ -1111,37 +1305,50 @@ class MetisToolDispatcher:
             "is_activated": node.is_activated,
         }
 
-    # 11. re_read_file_range
+    # 12. re_read_file_range
     def handle_re_read_file_range(self, args: Dict[str, Any]) -> Dict[str, Any]:
         sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
         offset = int(args.get("offset", 0))
-        length = int(args.get("length", 64))
+        requested_length = int(args.get("length", 64))
+
+        # Enforce R6 single slice size cap: max 64KB per call
+        MAX_API_SLICE_BYTES = 64 * 1024
+        eff_length = min(requested_length, MAX_API_SLICE_BYTES)
+        truncated_slice = requested_length > MAX_API_SLICE_BYTES
 
         read_bytes = b""
         total_size = 0
 
         if tree:
             node = tree.get_node(artifact_id)
-            content = tree.get_content(artifact_id)
-            if content is not None:
-                total_size = len(content)
-                if 0 <= offset < total_size:
-                    read_bytes = content[offset:offset + length]
+            if node:
+                total_size = node.size
+                read_bytes = tree.read_range(artifact_id, offset, eff_length)
         if not read_bytes and session_id:
             try:
-                read_bytes = self.engine.read_file_range(session_id, offset, length)
+                read_bytes = self.engine.read_file_range(session_id, offset, eff_length)
+                if not total_size and hasattr(self.engine, "get_file_size"):
+                    total_size = self.engine.get_file_size(session_id)
             except Exception:
                 read_bytes = b""
+
+        size_read = len(read_bytes)
+        # Fix: 'truncated' strictly means the requested length exceeded MAX_API_SLICE_BYTES (64KB) and was cut
+        is_truncated = (requested_length > MAX_API_SLICE_BYTES) and (size_read < requested_length) and (offset < total_size if total_size > 0 else True)
+        eof_reached = (offset + size_read >= total_size) if total_size > 0 else (size_read == 0)
 
         return {
             "status": "success",
             "artifact_id": artifact_id,
+            "session_id": session_id,
             "offset": offset,
-            "length": length,
-            "size_read": len(read_bytes),
+            "length": requested_length,
+            "size_read": size_read,
             "bytes_hex": read_bytes.hex(),
             "ascii_preview": read_bytes.decode("ascii", errors="replace"),
             "total_file_size": total_size,
+            "truncated": is_truncated,
+            "eof_reached": eof_reached,
         }
 
     # 12. re_translate_address
@@ -1214,6 +1421,23 @@ class MetisToolDispatcher:
             "session_id": session_id,
             "artifact": node.to_dict()
         }
+
+    # 14b. re_inspect_binary_structure
+    def handle_re_inspect_binary_structure(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        sess, tree, session_id, artifact_id = self._resolve_session_and_tree(args)
+        if not session_id:
+            return {"status": "error", "message": "session_id is required"}
+
+        scope = args.get("scope", "all")
+        query = args.get("query")
+        limit = int(args.get("limit", 100))
+
+        try:
+            return self.engine.inspect_binary_structure(session_id, scope=scope, query=query, limit=limit)
+        except KeyError:
+            return {"status": "error", "message": f"Session {session_id} not found"}
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to inspect binary structure: {str(e)}"}
 
     # 15. re_register_child_artifact
     def handle_re_register_child_artifact(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -1301,12 +1525,36 @@ class MetisToolDispatcher:
                 )
             return None
 
+        # Pass binary context (path and parsed object) for direct probe access
+        binary_path = None
+        target_binary = None
+        if session_id:
+            try:
+                meta = self.engine.get_metadata(session_id)
+                binary_path = meta.get("binary_path")
+            except Exception:
+                pass
+            if hasattr(self.engine, "_sessions") and session_id in self.engine._sessions:
+                sess_obj = self.engine._sessions[session_id]
+                target_binary = sess_obj.get("parsed")
+            elif hasattr(self.engine, "_active_sessions") and session_id in self.engine._active_sessions:
+                sess_obj = self.engine._active_sessions[session_id]
+                target_binary = sess_obj.get("parsed")
+
+        probe_custom_vars = dict(args.get("custom_vars") or {})
+        if binary_path:
+            probe_custom_vars.setdefault("binary_path", binary_path)
+            probe_custom_vars.setdefault("session_path", binary_path)
+        if target_binary is not None:
+            probe_custom_vars.setdefault("target_binary", target_binary)
+
         result = self.sandbox.execute_probe_script(
             script_code=script_code,
             read_file_func=_read_file_func,
             read_mem_func=_read_mem_func,
             register_child_func=_register_child_func,
             artifact_id=artifact_id,
+            custom_vars=probe_custom_vars,
         )
         result["session_id"] = session_id
         result["artifact_id"] = artifact_id

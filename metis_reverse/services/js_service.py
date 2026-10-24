@@ -457,26 +457,46 @@ class JSService:
             if not content:
                 continue
             text = content.decode("utf-8", errors="replace")
-            lines = text.splitlines()
+            lines = text.splitlines(keepends=True)
 
-            for line_no, line in enumerate(lines, 1):
+            char_cursor = 0
+            for line_no, raw_line in enumerate(lines, 1):
+                clean_line = raw_line.rstrip("\r\n")
                 hit = False
+                m_start_in_line = -1
+                m_len = 0
+                matched_val = ""
+
                 if pattern:
-                    if pattern.search(line):
+                    m = pattern.search(clean_line)
+                    if m:
                         hit = True
+                        m_start_in_line = m.start()
+                        m_len = m.end() - m.start()
+                        matched_val = m.group(0)
                 else:
-                    if query.lower() in line.lower():
+                    idx = clean_line.lower().find(query.lower())
+                    if idx != -1:
                         hit = True
+                        m_start_in_line = idx
+                        m_len = len(query)
+                        matched_val = clean_line[idx:idx + len(query)]
 
                 if hit:
+                    global_char_offset = char_cursor + m_start_in_line
                     matches.append({
                         "artifact_id": tid,
                         "module_name": tnode.name,
                         "line_number": line_no,
-                        "line_text": line.strip()[:200],
+                        "char_offset": global_char_offset,
+                        "length": m_len,
+                        "matched_text": matched_val,
+                        "line_text": clean_line.strip()[:200],
                     })
                     if len(matches) >= 500:
                         break
+
+                char_cursor += len(raw_line)
 
         total = len(matches)
         paged = matches[cursor:cursor + limit]
@@ -496,24 +516,57 @@ class JSService:
     @classmethod
     def extract_functions(cls, tree: ArtifactTree, artifact_id: str, module_path: Optional[str] = None) -> Dict[str, Any]:
         """Extracts declared function signatures and arrow functions from JavaScript source."""
+        target_content = None
+        target_id = artifact_id
         node = tree.get_node(artifact_id)
         if not node:
             return {"status": "error", "message": f"Artifact '{artifact_id}' not found"}
 
-        content = tree.get_content(artifact_id) or b""
-        text = content.decode("utf-8", errors="replace")
+        if module_path and node:
+            for child_id in node.children:
+                child = tree.get_node(child_id)
+                if child and (child.name == module_path or child.custom_metadata.get("module_path") == module_path):
+                    target_content = tree.get_content(child_id)
+                    target_id = child_id
+                    break
 
-        # Function patterns:
-        # function name(...)
-        # const name = (...) =>
-        # async function name(...)
+        if target_content is None:
+            target_content = tree.get_content(artifact_id) or b""
+
+        text = target_content.decode("utf-8", errors="replace")
+
+        # 1. First extract high-fidelity AST closures with balanced braces
+        closures = cls.extract_ast_closures(text, max_closures=500)
+        functions = []
+        seen_names = set()
+
+        for c in closures:
+            start_c = c["start_char"]
+            end_c = c["end_char"]
+            start_line = text[:start_c].count("\n") + 1
+            end_line = text[:end_c].count("\n") + 1
+            decl = c["code"].splitlines()[0][:100] if c["code"] else ""
+            functions.append({
+                "name": c["name"],
+                "params": ", ".join(c["params"]),
+                "line_number": start_line,
+                "start_line": start_line,
+                "end_line": end_line,
+                "start_char": start_c,
+                "end_char": end_c,
+                "char_length": c["char_length"],
+                "declaration": decl,
+                "kind": c["kind"],
+            })
+            if c["name"] != "anonymous":
+                seen_names.add(c["name"])
+
+        # 2. Also detect any line-level functions not captured by closures
         fn_patterns = [
             re.compile(r"(?:async\s+)?function\s+([a-zA-Z0-9_\$]+)\s*\(([^)]*)\)"),
             re.compile(r"(?:const|let|var)\s+([a-zA-Z0-9_\$]+)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>"),
             re.compile(r"([a-zA-Z0-9_\$]+)\s*\(([^)]*)\)\s*\{"), # class method
         ]
-
-        functions = []
         lines = text.splitlines()
         for l_num, line in enumerate(lines, 1):
             for pat in fn_patterns:
@@ -521,18 +574,25 @@ class JSService:
                 if m:
                     fn_name = m.group(1)
                     params = m.group(2).strip()
-                    if fn_name not in ("if", "for", "while", "switch", "catch"):
+                    if fn_name not in ("if", "for", "while", "switch", "catch") and fn_name not in seen_names:
                         functions.append({
                             "name": fn_name,
                             "params": params,
                             "line_number": l_num,
+                            "start_line": l_num,
+                            "end_line": l_num,
+                            "start_char": None,
+                            "end_char": None,
+                            "char_length": None,
                             "declaration": line.strip()[:100],
+                            "kind": "Declaration",
                         })
+                        seen_names.add(fn_name)
                         break
 
         return {
             "status": "success",
-            "artifact_id": artifact_id,
+            "artifact_id": target_id,
             "function_count": len(functions),
             "functions": functions[:200],
         }
@@ -540,17 +600,49 @@ class JSService:
     @classmethod
     def extract_strings(cls, tree: ArtifactTree, artifact_id: str, module_path: Optional[str] = None) -> Dict[str, Any]:
         """Extracts high-value strings (URLs, hostnames, env vars, config keys)."""
-        content = tree.get_content(artifact_id) or b""
-        text = content.decode("utf-8", errors="replace")
+        target_content = None
+        target_id = artifact_id
+        node = tree.get_node(artifact_id)
+        if not node:
+            return {"status": "error", "message": f"Artifact '{artifact_id}' not found"}
+
+        if module_path and node:
+            for child_id in node.children:
+                child = tree.get_node(child_id)
+                if child and (child.name == module_path or child.custom_metadata.get("module_path") == module_path):
+                    target_content = tree.get_content(child_id)
+                    target_id = child_id
+                    break
+
+        if target_content is None:
+            target_content = tree.get_content(artifact_id) or b""
+
+        text = target_content.decode("utf-8", errors="replace")
 
         urls = list(set(cls.URL_PATTERN.findall(text)))
         env_vars = list(set(cls.ENV_PATTERN.findall(text)))
         config_keys = list(set(cls.CONFIG_KEY_PATTERN.findall(text)))
 
+        occurrences = []
+        for pat, kind in [(cls.URL_PATTERN, "url"), (cls.ENV_PATTERN, "env_var"), (cls.CONFIG_KEY_PATTERN, "config_key")]:
+            for m in pat.finditer(text):
+                val = m.group(1) if m.groups() and m.group(1) is not None else m.group(0)
+                start_c = m.start(1) if m.groups() and m.group(1) is not None else m.start(0)
+                end_c = m.end(1) if m.groups() and m.group(1) is not None else m.end(0)
+                l_num = text[:start_c].count("\n") + 1
+                occurrences.append({
+                    "kind": kind,
+                    "value": val,
+                    "offset": start_c,
+                    "length": end_c - start_c,
+                    "line_number": l_num,
+                })
+
         return {
             "status": "success",
-            "artifact_id": artifact_id,
+            "artifact_id": target_id,
             "urls": urls[:50],
             "env_variables": env_vars[:50],
             "config_keys": config_keys[:50],
+            "occurrences": occurrences[:100],
         }

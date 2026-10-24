@@ -213,3 +213,16 @@ class MockEngine(BaseReEngine):
             "memory_view_unreliable": False,
             "discrepancies": [],
         }
+
+    def inspect_binary_structure(
+        self,
+        session_id: str,
+        scope: str = "all",
+        query: Optional[str] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        sess = self._sessions.get(session_id)
+        if not sess:
+            raise KeyError(f"Session {session_id} not found")
+        from ..services.structure_service import StructureService
+        return StructureService.inspect(sess, scope=scope, query=query, limit=limit)

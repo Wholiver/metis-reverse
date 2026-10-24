@@ -211,6 +211,20 @@ class DeepStaticService:
                 "confidence": 0.95,
             })
 
+        # 4. Built-in SQLite3 DB schema parsing
+        if data.startswith(b"SQLite format 3\x00"):
+            from .family_adapters import FamilyAdapters
+            res = FamilyAdapters.analyze_sqlite(data)
+            if res.get("is_sqlite_db") and "tables" in res:
+                for t in res["tables"]:
+                    schemas.append({
+                        "schema_type": "sqlite_table",
+                        "name": t.get("name"),
+                        "row_count": t.get("row_count"),
+                        "ddl": t.get("sql"),
+                        "confidence": 1.0,
+                    })
+
         return {
             "status": "success",
             "schema_count": len(schemas),

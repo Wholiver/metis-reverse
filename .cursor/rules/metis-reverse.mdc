@@ -25,9 +25,14 @@ You have access to the `metis-reverse` Model Context Protocol (MCP) server. When
 5. **Deterministic Degradation & Proactive Dependency Remediation**:
    - Check `re_capabilities` and `decompiler_available` before claiming AST decompilation.
    - When external decompilers (e.g., Ghidra 12.1.1+, `ilspycmd`, `jadx`) or Python packages (`lief`, `capstone`) are absent, Metis falls back to degraded synthesis (`decompilation_fidelity: "assembly_synthesis"`). Always report the active fidelity tier honestly and guide/execute dependency setup when needed.
+6. **Strict MCP Tool Discipline (Zero Terminal Bypassing)**:
+   - **Never run ad-hoc reversing in Terminal**: Do NOT use `run_terminal_command` to execute ad-hoc Python scripts (e.g. `.venv/bin/python - <<'EOF' import lief...`), `otool`, `strings`, `objdump`, `readelf`, or `nm` against mounted target binaries.
+   - **Use `re_inspect_binary_structure`**: For all structural layout inspection (segments, sections, dependencies/dylibs, imported/exported symbols, and `LC_ENCRYPTION_INFO` encryption status), call `re_inspect_binary_structure`.
+   - **Use `re_run_probe_script` for Custom Probing**: When custom algorithmic unpacking or byte transformation is needed, run inside `re_run_probe_script`. The sandbox pre-injects `lief`, `capstone`, `target_binary`, `binary_path`, `session_path`, and helper I/O (`read_file_range`, `read_memory`). Whitelisted modules (`json`, `struct`, `math`, `hashlib`, `lief`, `capstone`) can be imported directly inside the sandbox without error.
+   - Terminal access is strictly reserved for environmental prerequisite checks (e.g. verifying Ghidra installation) or building/running downstream verification tests.
 
-## 2. 24 Task-Level MCP Tools Matrix
-- **Session & Topology**: `re_session_manager`, `re_triage`, `re_tree_status`, `re_list_artifacts`, `re_inspect_artifact`, `re_capabilities`
+## 2. 29 Task-Level MCP Tools Matrix
+- **Universal & Artifact Topology**: `re_inspect`, `re_session_manager`, `re_triage`, `re_inspect_binary_structure`, `re_tree_status`, `re_list_artifacts`, `re_inspect_artifact`, `re_capabilities`
 - **Coordinates & Physical Slicing**: `re_read_file_range`, `re_translate_address`
 - **Decompilation & Context**: `re_query_function`, `re_decompile_function`
 - **Bridges & Schemas**: `re_bridge_map`, `re_extract_schemas`

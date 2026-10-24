@@ -332,6 +332,16 @@ class EmulationService:
                                     res_val = (rn_val - op2_val) & 0xFFFFFFFFFFFFFFFF
                                 _set_reg(rd, res_val)
 
+                        # eor / eors (XOR)
+                        elif mnemonic in ("eor", "eors"):
+                            m_eor = re.match(r"^([a-z0-9]+),\s*([a-z0-9]+),\s*(.+)$", op_str)
+                            if m_eor:
+                                rd, rn, op2_str = m_eor.groups()
+                                rn_val = _get_reg(rn)
+                                op2_clean = op2_str.strip().lstrip("#")
+                                op2_val = _get_reg(op2_clean) if op2_clean in registers else (_parse_int(op2_clean) or 0)
+                                _set_reg(rd, (rn_val ^ op2_val) & 0xFFFFFFFFFFFFFFFF)
+
                         # mov / movz / movk
                         elif mnemonic in ("mov", "movz", "movk", "movabs"):
                             m_mov = re.match(r"^([a-z0-9]+),\s*(.+)$", op_str)
@@ -363,11 +373,34 @@ class EmulationService:
                             _set_reg(reg, val)
                             _set_reg("rsp", (rsp_val + 8) & 0xFFFFFFFFFFFFFFFF)
                         elif mnemonic == "mov":
-                            m_mov = re.match(r"^([a-z0-9]+),\s*([a-z0-9]+)$", op_str)
-                            if m_mov:
-                                dst, src = m_mov.groups()
+                            # mov reg, [reg + off]
+                            m_load = re.match(r"^([a-z0-9]+),\s*(?:qword|dword|word|byte)?\s*(?:ptr\s*)?\[([a-z0-9]+)(?:\s*([+-])\s*([0-9a-fx]+))?\]$", op_str)
+                            # mov [reg + off], reg / imm
+                            m_store = re.match(r"^(?:qword|dword|word|byte)?\s*(?:ptr\s*)?\[([a-z0-9]+)(?:\s*([+-])\s*([0-9a-fx]+))?\],\s*([a-z0-9]+|0x[0-9a-f]+|-?\d+)$", op_str)
+                            m_reg = re.match(r"^([a-z0-9]+),\s*([a-z0-9]+|0x[0-9a-f]+|-?\d+)$", op_str)
+                            if m_load:
+                                dst, base_reg, sign, off_str = m_load.groups()
+                                off = (_parse_int(off_str) or 0) * (-1 if sign == "-" else 1)
+                                addr = (_get_reg(base_reg) + off) & 0xFFFFFFFFFFFFFFFF
+                                val = int.from_bytes(_mem_read(addr, 8), "little")
+                                _set_reg(dst, val)
+                            elif m_store:
+                                base_reg, sign, off_str, src = m_store.groups()
+                                off = (_parse_int(off_str) or 0) * (-1 if sign == "-" else 1)
+                                addr = (_get_reg(base_reg) + off) & 0xFFFFFFFFFFFFFFFF
+                                val = _get_reg(src) if src in registers else (_parse_int(src) or 0)
+                                _mem_write(addr, val.to_bytes(8, "little"))
+                            elif m_reg:
+                                dst, src = m_reg.groups()
                                 val = _get_reg(src) if src in registers else (_parse_int(src) or 0)
                                 _set_reg(dst, val)
+                        elif mnemonic == "xor":
+                            m_xor = re.match(r"^([a-z0-9]+),\s*([a-z0-9]+|0x[0-9a-f]+|-?\d+)$", op_str)
+                            if m_xor:
+                                dst, src = m_xor.groups()
+                                dst_val = _get_reg(dst)
+                                src_val = _get_reg(src) if src in registers else (_parse_int(src) or 0)
+                                _set_reg(dst, (dst_val ^ src_val) & 0xFFFFFFFFFFFFFFFF)
                         elif mnemonic == "sub":
                             m_sub = re.match(r"^([a-z0-9]+),\s*(.+)$", op_str)
                             if m_sub:

@@ -1,7 +1,12 @@
 __pycache__/
 *.py[cod]
+build/
+dist/
 *.egg-info/
 .venv/
 .pytest_cache/
 .DS_Store
 .metis_sidecars/
+node_modules/
+*.bak
+
