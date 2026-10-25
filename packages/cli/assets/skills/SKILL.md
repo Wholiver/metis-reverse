@@ -4,7 +4,7 @@ aliases:
   - metis-reverse-mcp
 description: High-fidelity AI-assisted deterministic reverse engineering with Metis Reverse MCP (metis-reverse-mcp). Autonomous binary analysis, multi-architecture decompilation, polyglot container unpacking, cross-language bridge mapping, hypothesis verification, micro-emulation, deobfuscation, sidecar model refinement, and cross-patch knowledge transfer. Covers ELF, Mach-O, PE, Bun standalone bundles, Electron ASAR, Android APK/DEX, .NET CIL, Go, Rust, Python/PyInstaller, Lua, Wasm, and firmware containers.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   surfaces:
     - ide
     - chat
@@ -351,14 +351,14 @@ Install the specific toolchain matching the user's target binary family:
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Wholiver/metis-reverse.git",
+        "git+https://github.com/Wholiver/metis-reverse.git@latest",
         "metis-reverse"
       ]
     }
   }
 }
 ```
-Or run `npx metis-reverse-cli@1.0.0 setup` and let the CLI write the same entry.
+Or run `npx metis-reverse-cli@latest setup` and let the CLI write the same entry.
 
 **Advanced (from-source venv):** only if you develop the engine locally — set `command` to your venv’s `python` with `args: ["-m", "metis_reverse.server"]`, and optionally pass `GHIDRA_INSTALL_DIR` / `METIS_SIDECAR_DIR` in `env`. Prefer absolute paths you control; do not copy placeholder paths from old docs.
 > **Note**: After updating Python packages (`lief`, `capstone`) or `GHIDRA_INSTALL_DIR`, restart the MCP server (or reload the MCP client connection) and re-run `re_capabilities` to confirm the upgraded capability status.

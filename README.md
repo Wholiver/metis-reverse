@@ -21,7 +21,7 @@
 
 > **v1.0.1 — install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli) (`npm` dist-tag **`latest` → 1.0.1**). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@latest setup`. The engine repo also has a moving Git tag **`latest`** (currently = `v1.0.1`) for `uvx` / source downloads.
 
-<p align="center"><img src="docs/images/readme/en/sections/quickstart-v2.png" alt="Quick Start" width="100%"></p>
+<p align="center"><img src="docs/images/readme/en/sections/quickstart-v3.png" alt="Quick Start" width="100%"></p>
 
 **1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
@@ -83,7 +83,7 @@ Cursor also gets `~/.cursor/skills/metis-reverse` and `~/.cursor/rules/metis-rev
 <details>
 <summary><b>Advanced: manual MCP config & source install</b></summary>
 
-What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI). Pin the moving **`latest`** tag (or `v1.0.1`) so installs stay reproducible:
+What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI), pinned to the moving **`latest`** tag (currently `v1.0.1`):
 
 ```json
 {
@@ -166,7 +166,7 @@ cd demo && make
 </tr>
 </table>
 
-<p align="center"><img src="docs/images/readme/en/arch-v2.png" alt="Architecture" width="100%"></p>
+<p align="center"><img src="docs/images/readme/en/arch-v3.png" alt="Architecture" width="100%"></p>
 
 <p align="center"><img src="docs/images/readme/en/sections/tools-v2.png" alt="MCP Tools" width="100%"></p>
 
