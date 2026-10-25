@@ -25,9 +25,9 @@
 
 **1. 安装并接入。** 需要 [Node.js](https://nodejs.org/) 18+ 和 [uv](https://docs.astral.sh/uv/)（引擎用 `uvx` 从 GitHub 拉；**目前没有** PyPI 包）。
 
-```
-没用过终端的话，可看带截图的安装教程：[docs/INSTALL.zh-CN.md](docs/INSTALL.zh-CN.md)。
-bash
+详细安装教程：[docs/INSTALL.zh-CN.md](docs/INSTALL.zh-CN.md)。
+
+```bash
 npx metis-reverse-cli@latest setup
 ```
 
