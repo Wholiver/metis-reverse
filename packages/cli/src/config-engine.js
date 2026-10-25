@@ -7,7 +7,7 @@ const DEFAULT_MCP_KEY = "metis-reverse";
 const DEFAULT_COMMAND = "uvx";
 const DEFAULT_ARGS = [
   "--from",
-  "git+https://github.com/Wholiver/metis-reverse.git",
+  "git+https://github.com/Wholiver/metis-reverse.git@latest",
   "metis-reverse",
 ];
 

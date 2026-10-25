@@ -83,7 +83,7 @@ Cursor 还会写入 `~/.cursor/skills/metis-reverse` 与 `~/.cursor/rules/metis-
 <details>
 <summary><b>进阶：手写 MCP 配置与源码安装</b></summary>
 
-`setup` 实际写入的内容（引擎走 GitHub + uvx —— **不是** npm，**也不是** PyPI）。建议钉住浮动 **`latest`** 标签（或 `v1.0.1`），安装更可复现：
+`setup` 实际写入的内容（引擎走 GitHub + uvx —— **不是** npm，**也不是** PyPI），已钉浮动 **`latest`** 标签（当前 `v1.0.1`）：
 
 ```json
 {
