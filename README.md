@@ -26,7 +26,7 @@
 **1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
 ```
-Prefer a screenshot walkthrough? See [docs/INSTALL.md](docs/INSTALL.md).
+Step-by-step beginner guide: [docs/INSTALL.md](docs/INSTALL.md).
 bash
 npx metis-reverse-cli@latest setup
 ```
@@ -38,7 +38,7 @@ npm install -g metis-reverse-cli@latest
 metis setup          # same binary as `metis-reverse`
 ```
 
-`setup` finds coding agents on your machine, shows what it will write (MCP + Skill + Cursor rules), keeps a `.bak` of existing MCP configs, and asks before writing. When you see `Done.`, restart the agent. Check with:
+`setup` finds coding agents on your machine, shows what it will write (MCP + Skill + Cursor rules), keeps a `.bak` of existing MCP configs, and asks before writing. When you see `Setup complete! Please restart your selected agents to activate Metis Reverse.`, restart those agents. Check with:
 
 ```bash
 metis doctor
