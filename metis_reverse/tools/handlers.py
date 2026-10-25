@@ -8,7 +8,7 @@ import json
 import base64
 import hashlib
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from ..config import MetisConfig, load_config
 from ..security.prompt_shield import PromptShield
