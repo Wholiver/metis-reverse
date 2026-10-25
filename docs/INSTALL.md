@@ -30,6 +30,8 @@ The engine is **not** on npm. `setup` writes:
 
 Windows: PowerShell · macOS: Terminal · Linux: usually `Ctrl + Alt + T`.
 
+![Open a terminal](images/readme/tutorial/open-terminal.png)
+
 ## 1. Install Node.js
 
 Download **LTS** from https://nodejs.org/en/download , install, **reopen the terminal**, then:
@@ -66,6 +68,9 @@ Interactive flow (wording from the 1.0.1 source):
 
 1. Detect agents on this machine  
 2. **`Which agents should Metis Reverse be installed into?`** — arrows, **Space** to toggle, Enter  
+
+![Pick agents](images/readme/tutorial/setup-pick.png)
+
 3. **`Install complete Agent Skill package (SKILL.md + reverse references + rules)?`** — default Yes (`--no-skill` to skip)  
 4. **Installation Plan** (MCP paths + skill on/off). Existing MCP configs get a **`.bak`**  
 5. **`Apply these configurations to selected agents?`** — default Yes  
@@ -75,6 +80,8 @@ Success outro:
 ```text
 Setup complete! Please restart your selected agents to activate Metis Reverse.
 ```
+
+![Setup complete](images/readme/tutorial/setup-done.png)
 
 Non-interactive example:
 
@@ -93,6 +100,8 @@ Fully quit and reopen every agent you selected.
 ```bash
 npx metis-reverse-cli@latest doctor
 ```
+
+![doctor](images/readme/tutorial/doctor.png)
 
 You should see per-agent `Detected` / `MCP: Ready` / `Skill: Ready` (or N/A). When configured: `Metis Reverse is active on N agent(s).` → `All systems operational.`
 

@@ -30,6 +30,8 @@
 
 后面说「粘贴」，就是复制进这个窗口再回车。
 
+![打开终端](images/readme/tutorial/open-terminal.png)
+
 ## 第 1 步：装 Node.js
 
 1. 打开 https://nodejs.org/en/download ，下 **LTS**，装完  
@@ -78,6 +80,9 @@ npx metis-reverse-cli@latest setup
 1. 探测本机 Agent（会提示找到几个）
 2. **`Which agents should Metis Reverse be installed into?`**  
    方向键移动，**空格勾选**，回车。已检测到 / 已配置的一般会预勾。
+
+![选择要安装的 Agent](images/readme/tutorial/setup-pick.png)
+
 3. **`Install complete Agent Skill package (SKILL.md + reverse references + rules)?`**  
    默认 Yes；只想写 MCP 可选 No，或事先加 `--no-skill`。
 4. 弹出 **Installation Plan**（各客户端 MCP 路径 + Skill 是否开启）。已有 MCP 配置会先留 **`.bak`**。
@@ -89,6 +94,8 @@ npx metis-reverse-cli@latest setup
 ```text
 Setup complete! Please restart your selected agents to activate Metis Reverse.
 ```
+
+![Setup 成功](images/readme/tutorial/setup-done.png)
 
 跳过菜单的例子：
 
@@ -119,6 +126,8 @@ npx metis-reverse-cli@latest preview
 ```bash
 npx metis-reverse-cli@latest doctor
 ```
+
+![doctor 自检](images/readme/tutorial/doctor.png)
 
 1.0.1 的 doctor 会列出每个客户端：`Detected` / `MCP: Ready` / `Skill: Ready`（或不支持 Skill）。  
 配好了一般会看到类似：`Metis Reverse is active on N agent(s).` → `All systems operational.`  
