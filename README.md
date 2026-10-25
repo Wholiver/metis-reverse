@@ -25,9 +25,9 @@
 
 **1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
-```
-Prefer a screenshot walkthrough? See [docs/INSTALL.md](docs/INSTALL.md).
-bash
+Step-by-step beginner guide: [docs/INSTALL.md](docs/INSTALL.md).
+
+```bash
 npx metis-reverse-cli@latest setup
 ```
 
