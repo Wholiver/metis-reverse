@@ -1,6 +1,6 @@
 {
   "name": "metis-reverse-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "One-click multi-agent setup, doctor & uninstall CLI for Metis Reverse",
   "license": "Apache-2.0",
   "author": "Metis Reverse Authors",

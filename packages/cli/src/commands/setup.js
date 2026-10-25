@@ -81,16 +81,41 @@ async function runSetup(options = {}) {
       .filter((s) => s.configured || s.detected)
       .map((s) => s.agent.id);
 
-    const termRows = process.stdout.rows || 24;
-    const maxItems = Math.max(5, Math.min(7, termRows - 14));
+    // Expand terminal row constraint so multiselect displays all choices without folding (...)
+    const prevRows = process.stdout.rows;
+    if (process.stdout.isTTY && (process.stdout.rows || 0) < choices.length + 8) {
+      try {
+        Object.defineProperty(process.stdout, "rows", {
+          value: Math.max(process.stdout.rows || 24, choices.length + 10),
+          configurable: true,
+          writable: true,
+        });
+      } catch {
+        // ignore
+      }
+    }
 
-    const selectedIds = await p.multiselect({
-      message: "Which agents should Metis Reverse be installed into?",
-      options: choices,
-      initialValues: initial.length > 0 ? initial : undefined,
-      required: true,
-      maxItems,
-    });
+    let selectedIds;
+    try {
+      selectedIds = await p.multiselect({
+        message: "Which agents should Metis Reverse be installed into?",
+        options: choices,
+        initialValues: initial.length > 0 ? initial : undefined,
+        required: true,
+      });
+    } finally {
+      if (prevRows !== undefined) {
+        try {
+          Object.defineProperty(process.stdout, "rows", {
+            value: prevRows,
+            configurable: true,
+            writable: true,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    }
 
     if (p.isCancel(selectedIds)) {
       p.cancel("Setup cancelled.");
@@ -251,14 +276,21 @@ async function runWalkthrough(options = {}) {
   console.log(c.cyan("?") + "  " + c.bold("Which agents should Metis Reverse be installed into?"));
   console.log(c.cyan("│") + "  " + c.dim("Press <space> to select, <a> to toggle all, <enter> to confirm:"));
   console.log(c.cyan("│"));
-  console.log(c.cyan("│") + "  " + c.green("◼") + " " + c.bold("Cursor") + "              " + c.dim("· MCP active · detected · supports skill"));
-  console.log(c.cyan("│") + "  " + c.green("◼") + " " + c.bold("Antigravity")         + "         " + c.dim("· MCP active · detected · supports skill"));
-  console.log(c.cyan("│") + "  " + c.green("◼") + " " + c.bold("Claude Code")         + "         " + c.dim("· detected · supports skill"));
-  console.log(c.cyan("│") + "  " + c.dim("◻") + " " + "Claude Desktop"        + "      " + c.dim("· detected"));
-  console.log(c.cyan("│") + "  " + c.dim("◻") + " " + "VS Code"               + "             " + c.dim("· detected"));
-  console.log(c.cyan("│") + "  " + c.dim("◻") + " " + "Codex"                 + "               " + c.dim("· detected · supports skill"));
-  console.log(c.cyan("│") + "  " + c.dim("◻") + " " + "Trae"                  + "                " + c.dim("· detected · supports skill"));
-  console.log(c.cyan("│") + "  " + c.dim("... (use arrow keys to scroll, 7 of 23 shown)"));
+  const sampleAgents = getAgentDefinitions(options);
+  const sampleConfigured = new Set(["cursor", "antigravity"]);
+  const sampleDetected = new Set(["cursor", "antigravity", "claude_code", "claude_desktop", "vscode", "codex", "trae", "windsurf", "gemini_cli", "opencode", "copilot_cli", "kimi", "qwen_code", "droid"]);
+  for (const a of sampleAgents) {
+    const isConfigured = sampleConfigured.has(a.id);
+    const isDetected = sampleDetected.has(a.id);
+    const icon = isConfigured ? c.green("◼") : c.dim("◻");
+    const nameStr = (isConfigured ? c.bold(a.displayName) : a.displayName).padEnd(22, " ");
+    const hints = [];
+    if (isConfigured) hints.push("MCP active");
+    if (isDetected) hints.push("detected");
+    else hints.push("not detected");
+    if (a.skillPath) hints.push("supports skill");
+    console.log(c.cyan("│") + "  " + icon + " " + nameStr + " " + c.dim("· " + hints.join(" · ")));
+  }
   console.log(c.cyan("│"));
   console.log(c.cyan("?") + "  " + c.bold("Install complete Agent Skill package (SKILL.md + reverse references + rules)?"));
   console.log(c.cyan("│") + "  " + c.green("● Yes") + c.dim(" / ○ No"));
