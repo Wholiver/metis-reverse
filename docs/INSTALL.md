@@ -1,168 +1,208 @@
-# Metis Reverse install guide (for beginners)
+# Metis Reverse install guide (beginner)
 
 **English** · [简体中文](INSTALL.zh-CN.md)
 
-The whole thing is five steps: **open a terminal → paste one command → press Enter → see `Done.` → restart your app**.
+Written for the current **1.0.1** CLI. Flow: install Node + uv → run one `setup` → pick agents → see the completion line → **restart** those apps.
 
-First you need two small tools, Node.js and uv. Each step below says exactly what to do.
+> **Install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer:
+>
+> ```bash
+> npx metis-reverse-cli@latest setup
+> ```
+>
+> (or pin `@1.0.1`). The engine is **not** on npm or PyPI. Setup writes an MCP entry that uses `uvx` from the GitHub **`latest`** tag.
 
-> **Install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@latest setup` (or pin `@1.0.1`). The engine is pulled from the GitHub **`latest`** tag.
+## Prerequisites
+
+| Tool | Why | Version |
+| --- | --- | --- |
+| [Node.js](https://nodejs.org/) | Runs `npx` / the CLI | **18+** (LTS recommended) |
+| [uv](https://docs.astral.sh/uv/) | Provides `uvx` for the MCP engine | Any build where `uv --version` works |
+
+After installing either tool, **close and reopen the terminal**, or you may still get `command not found`.
 
 ## Step 0: Open a terminal
 
-A terminal is a window where you type commands.
-
-- **Windows**: press the Windows key, type `PowerShell`, and open "Windows PowerShell".
-- **macOS**: press `Command + Space`, type `Terminal`, press Enter.
-- **Linux**: usually `Ctrl + Alt + T`.
-
-![Open a terminal](images/readme/tutorial/open-terminal.png)
-
-"Paste a command" below means: copy it into this window and press Enter.
+- **Windows**: Windows key → `PowerShell` → open Windows PowerShell
+- **macOS**: `Command + Space` → `Terminal` → Enter
+- **Linux**: usually `Ctrl + Alt + T`
 
 ## Step 1: Install Node.js
 
-1. Go to https://nodejs.org/en/download and download the **LTS** installer.
-2. Run it and click Next until it finishes. On Linux, follow the instructions on that page.
-3. **Close the terminal and open it again**, then paste:
+1. Download the **LTS** installer from https://nodejs.org/en/download (follow the page on Linux)
+2. Reopen the terminal and run:
 
 ```bash
 node -v
 ```
 
-A version like `v20.19.2` (anything **18 or newer**) means it worked.
+Anything like `v18` / `v20` / `v22` is fine.
 
 ## Step 2: Install uv
 
-uv downloads and runs the Metis Reverse engine (`uvx` from GitHub; there is **no** PyPI package yet). It also installs the Python it needs, so you don't install Python yourself.
+uv pulls the analysis engine and brings its own Python — you do not install Python separately.
 
-**Windows** (in PowerShell):
+**Windows (PowerShell):**
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-**macOS / Linux**:
+**macOS / Linux:**
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Close the terminal and open it again**, then check:
+Reopen the terminal, then:
 
 ```bash
 uv --version
 ```
 
-Output like `uv 0.x.x` means it worked. You can also use `brew install uv` (macOS) or `winget install --id=astral-sh.uv -e` (Windows).
+Alternatives: `brew install uv` (macOS) or `winget install --id=astral-sh.uv -e` (Windows).
 
-## Step 3: Run the install command
+## Step 3: Run setup
 
-> If you use Claude Desktop, **fully quit** it first (not just close the window).
-
-Paste this and press Enter:
+If you use **Claude Desktop**, **fully quit** it first (not just close the window).
 
 ```bash
 npx metis-reverse-cli@latest setup
 ```
 
-The first run can take a few minutes while it downloads engine dependencies. If it looks stuck, leave the window open.
+The first `npx` run may ask to download/execute the package — accept that. Then you get the Metis Reverse installer UI (banner like `METIS REVERSE  Agent Installer & MCP Manager  v1.0.1`).
 
-You will see a few prompts:
+### What you will see
 
-- **Whether to install `metis-reverse-cli`**: type `y` and Enter.
-- **A list of apps**: coding agents found on your machine (Cursor, Claude Code, VS Code, …). Use the arrow keys, Space to select, Enter to confirm.
-- **`Install Agent Skill where supported?`**: default is Yes — press Enter.
-- **Setup plan**: lists files it will change. Existing MCP configs are backed up as `.bak` first.
-- **`Proceed with installation?`**: default is Yes — press Enter.
+1. **Detecting installed AI agents…**  
+   Scans the ~20+ supported coding agents on this machine.
 
-![setup app picker](images/readme/tutorial/setup-pick.png)
+2. **Which agents should Metis Reverse be installed into?**  
+   Multi-select. Detected / already configured agents sort first, with hints like `detected` / `MCP active`.  
+   - Arrow keys to move  
+   - **Space** to toggle  
+   - Some terminals: `a` to toggle all  
+   - **Enter** to confirm  
+   At least one selection is required.
 
-Success looks like:
+3. **Install complete Agent Skill package (SKILL.md + reverse references + rules)?**  
+   Default Yes. Installs the skill pack where supported (Cursor also gets rules). Press Enter for the default.
 
+4. **Installation Plan**  
+   Shows MCP config paths per agent and whether Skill distribution is enabled. Existing config files are backed up as **`.bak`** before write.
+
+5. **Apply these configurations to selected agents?**  
+   Default Yes. Confirm to write.
+
+### Success looks like
+
+```text
+Setup complete! Please restart your selected agents to activate Metis Reverse.
 ```
-Done. Restart the configured agents to load Metis Reverse.
-```
 
-![Install finished](images/readme/tutorial/setup-done.png)
+Per-agent `MCP` / `Skill` lines show what was written (or why a step failed).
 
-Skip the picker by naming clients directly, for example:
+### Skip the menus
 
 ```bash
 npx metis-reverse-cli@latest setup --client cursor --client claude_code --yes
 ```
 
-Or install the CLI globally first, then run the same wizard:
+MCP only (no Skill):
+
+```bash
+npx metis-reverse-cli@latest setup --client cursor --yes --no-skill
+```
+
+Or install the CLI globally first:
 
 ```bash
 npm install -g metis-reverse-cli@latest
 metis setup
 ```
 
+(`metis` and `metis-reverse` are the same binary.)
+
 ## Step 4: Restart your apps
 
-**Fully quit and reopen** every app you selected. Without a restart they will not load the new config.
+**Fully quit and reopen** every app you selected. Without a restart they will not load the new MCP config.
 
-## Step 5: Check (optional)
+## Step 5: Check with doctor
 
 ```bash
 npx metis-reverse-cli@latest doctor
 ```
 
-The last line should be `Healthy: yes`. Configured clients show `registered`. For machine-readable output use `doctor --json`.
+Lists each supported agent: detected or not, MCP Ready / None, Skill Ready / None / N/A.  
+When configured you should see something like:
 
-WARN lines are usually fine for first use. Optional backends (for example Ghidra via `GHIDRA_INSTALL_DIR`) show up in doctor when present.
-
-![doctor check](images/readme/tutorial/doctor.png)
-
-You can also confirm in the app: open its MCP settings (Cursor: **Settings → MCP**). You should see `metis-reverse` with about **29** task-level tools.
-
-Remove only Metis Reverse (leave other MCP servers alone):
-
-```bash
-npx metis-reverse-cli@latest uninstall
+```text
+Metis Reverse is active on N agent(s).
+All systems operational.
 ```
 
-Dry-run / preview without writing files:
+If nothing is configured yet, it tells you to run `setup`.
+
+Machine-readable output (includes config paths):
 
 ```bash
-npx metis-reverse-cli@latest preview
+npx metis-reverse-cli@latest doctor --json
 ```
+
+In Cursor you can also open **Settings → MCP** and confirm `metis-reverse` with about **29** task-level tools.
+
+## Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `npx metis-reverse-cli@latest setup` | Interactive install (default command) |
+| `npx metis-reverse-cli@latest preview` | Dry-run: same UI/detection, **no disk writes** |
+| `npx metis-reverse-cli@latest doctor` | Health check |
+| `npx metis-reverse-cli@latest uninstall` | Remove only Metis Reverse (leave other MCP servers) |
+
+Aliases: `setup` → `init` / `install`; `doctor` → `check` / `status`; `uninstall` → `remove`.
 
 ## Troubleshooting
 
-**`node` or `npx` is not recognized / command not found**  
-Node.js is missing, or the terminal was not restarted after install. Close and reopen the terminal; if that fails, reinstall the Node.js LTS build.
+**`node` / `npx` not found**  
+Node missing, or terminal not restarted after install. Reopen; otherwise reinstall LTS.
 
 **`uv` / `uvx` not found**  
-uv is missing, or the terminal was not restarted. Go back to Step 2.
+Back to Step 2; reopen the terminal. The MCP engine needs `uvx`.
 
-**`npx` is very slow or hangs**  
-Often a network issue. Try a mirror, for example:
+**`npx` is slow or hangs**  
+Try a registry mirror, for example:
 
 ```bash
 npx --registry=https://registry.npmmirror.com metis-reverse-cli@latest setup
 ```
 
-**Windows: script execution is disabled**  
-In PowerShell, run this, type `Y` when asked, then reopen the terminal:
+**Windows: script execution disabled**
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-**`No clients selected`**  
-Nothing was checked in the list. Run setup again and press Space to select, or pass clients explicitly:
+Type `Y` when asked, then reopen the terminal.
+
+**No agents selected**  
+Use Space in the list, or:
 
 ```bash
 npx metis-reverse-cli@latest setup --client cursor --yes
 ```
 
-**Where did it write the config?**  
-Run `npx metis-reverse-cli@latest doctor` (or `doctor --json`). The `clients` subcommand was removed in 1.0.x.
+**Where were configs written?**  
+Check the Installation Plan in setup, or:
+
+```bash
+npx metis-reverse-cli@latest doctor --json
+```
+
+There is **no** `clients` subcommand in 1.0.x.
 
 **Wrong package name**  
-Use `metis-reverse-cli@latest` (or pin `@1.0.1`). The old name `metis-reverse` is still 0.0.1 and is not this release.
+Use `metis-reverse-cli@latest` (or `@1.0.1`). Old `metis-reverse` is still 0.0.1.
 
 **Still stuck**  
-Paste the full output of `npx metis-reverse-cli@latest doctor` into a [GitHub Issue](https://github.com/Wholiver/metis-reverse/issues), or ask in the Metis QQ group: **801193315**.
+Paste the full `npx metis-reverse-cli@latest doctor` output into a [GitHub Issue](https://github.com/Wholiver/metis-reverse/issues), or ask in the Metis QQ group: **801193315**.
