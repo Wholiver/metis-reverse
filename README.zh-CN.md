@@ -19,20 +19,20 @@
   <a href="#community"><img src="https://img.shields.io/badge/QQ%20group-801193315-5aa9e6.svg" alt="QQ 801193315"></a>
 </p>
 
-> **v1.0.0 — 请装对包名。** 正式 CLI 是 [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli)。旧 npm 名 `metis-reverse` 仍停在 **0.0.1**，**不是**本版。推荐：`npx metis-reverse-cli@1.0.0 setup`。
+> **v1.0.1 — 请装对包名。** 正式 CLI 是 [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli)（npm dist-tag **`latest` → 1.0.1**）。旧 npm 名 `metis-reverse` 仍停在 **0.0.1**，**不是**本版。推荐：`npx metis-reverse-cli@latest setup`。引擎仓库另有浮动 Git 标签 **`latest`**（当前等于 `v1.0.1`），供 `uvx` / 源码下载。
 
 <p align="center"><img src="docs/images/readme/zh/sections/quickstart-v2.png" alt="快速开始" width="100%"></p>
 
 **1. 安装并接入。** 需要 [Node.js](https://nodejs.org/) 18+ 和 [uv](https://docs.astral.sh/uv/)（引擎用 `uvx` 从 GitHub 拉；**目前没有** PyPI 包）。
 
 ```bash
-npx metis-reverse-cli@1.0.0 setup
+npx metis-reverse-cli@latest setup
 ```
 
 或先全局安装 CLI，再跑同一套向导：
 
 ```bash
-npm install -g metis-reverse-cli@1.0.0
+npm install -g metis-reverse-cli@latest
 metis setup          # 与 `metis-reverse` 是同一个入口
 ```
 
@@ -40,7 +40,7 @@ metis setup          # 与 `metis-reverse` 是同一个入口
 
 ```bash
 metis doctor
-# 或：npx metis-reverse-cli@1.0.0 doctor
+# 或：npx metis-reverse-cli@latest doctor
 ```
 
 只卸 Metis Reverse（其它 MCP 保留）：
@@ -83,7 +83,7 @@ Cursor 还会写入 `~/.cursor/skills/metis-reverse` 与 `~/.cursor/rules/metis-
 <details>
 <summary><b>进阶：手写 MCP 配置与源码安装</b></summary>
 
-`setup` 实际写入的内容（引擎走 GitHub + uvx —— **不是** npm，**也不是** PyPI）：
+`setup` 实际写入的内容（引擎走 GitHub + uvx —— **不是** npm，**也不是** PyPI）。建议钉住浮动 **`latest`** 标签（或 `v1.0.1`），安装更可复现：
 
 ```json
 {
@@ -92,7 +92,7 @@ Cursor 还会写入 `~/.cursor/skills/metis-reverse` 与 `~/.cursor/rules/metis-
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Wholiver/metis-reverse.git",
+        "git+https://github.com/Wholiver/metis-reverse.git@latest",
         "metis-reverse"
       ]
     }
@@ -100,18 +100,22 @@ Cursor 还会写入 `~/.cursor/skills/metis-reverse` 与 `~/.cursor/rules/metis-
 }
 ```
 
+命令行同理：`uvx --from git+https://github.com/Wholiver/metis-reverse.git@latest metis-reverse`。
+
 可选环境变量（默认不写）：`GHIDRA_INSTALL_DIR`、`METIS_SIDECAR_DIR`。
 
-从源码检出安装（Python **3.10+**）：
+从源码检出安装（Python **3.10+**），请拉 **`latest`** 标签（或 `v1.0.1`）：
 
 ```bash
-git clone https://github.com/Wholiver/metis-reverse.git
+git clone --branch latest --depth 1 https://github.com/Wholiver/metis-reverse.git
 cd metis-reverse
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
 
-随后把 MCP 的 `command` 指到该环境的 `metis-reverse`，或继续用上面的 `uvx --from git+…` 形式。
+也可直接下源码包：[latest.zip](https://github.com/Wholiver/metis-reverse/archive/refs/tags/latest.zip)。
+
+随后把 MCP 的 `command` 指到该环境的 `metis-reverse`，或继续用上面的 `uvx --from git+…@latest` 形式。
 
 </details>
 
@@ -166,7 +170,7 @@ cd demo && make
 
 <p align="center"><img src="docs/images/readme/zh/sections/tools-v2.png" alt="MCP 工具" width="100%"></p>
 
-**v1.0.0 引擎约 29 个 MCP 工具**（`re_*` / `js_*` handlers）。下面按任务分组摘要。
+**v1.0.1 引擎约 29 个 MCP 工具**（`re_*` / `js_*` handlers）。下面按任务分组摘要。
 
 <details>
 <summary><b>会话 · triage · 制品</b></summary>

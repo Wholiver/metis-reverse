@@ -19,20 +19,20 @@
   <a href="#community"><img src="https://img.shields.io/badge/QQ%20group-801193315-5aa9e6.svg" alt="QQ 801193315"></a>
 </p>
 
-> **v1.0.0 — install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@1.0.0 setup`.
+> **v1.0.1 — install the right package.** The published CLI is [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli) (`npm` dist-tag **`latest` → 1.0.1**). The older npm name `metis-reverse` is still stuck at **0.0.1** and is **not** this release. Prefer `npx metis-reverse-cli@latest setup`. The engine repo also has a moving Git tag **`latest`** (currently = `v1.0.1`) for `uvx` / source downloads.
 
 <p align="center"><img src="docs/images/readme/en/sections/quickstart-v2.png" alt="Quick Start" width="100%"></p>
 
 **1. Install & connect.** You need [Node.js](https://nodejs.org/) 18+ and [uv](https://docs.astral.sh/uv/) (the MCP engine is pulled with `uvx` from GitHub; there is **no** PyPI package yet).
 
 ```bash
-npx metis-reverse-cli@1.0.0 setup
+npx metis-reverse-cli@latest setup
 ```
 
 Or install the CLI globally, then run the same wizard:
 
 ```bash
-npm install -g metis-reverse-cli@1.0.0
+npm install -g metis-reverse-cli@latest
 metis setup          # same binary as `metis-reverse`
 ```
 
@@ -40,7 +40,7 @@ metis setup          # same binary as `metis-reverse`
 
 ```bash
 metis doctor
-# or: npx metis-reverse-cli@1.0.0 doctor
+# or: npx metis-reverse-cli@latest doctor
 ```
 
 Remove only Metis Reverse (other MCP servers stay):
@@ -83,7 +83,7 @@ Cursor also gets `~/.cursor/skills/metis-reverse` and `~/.cursor/rules/metis-rev
 <details>
 <summary><b>Advanced: manual MCP config & source install</b></summary>
 
-What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI):
+What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI). Pin the moving **`latest`** tag (or `v1.0.1`) so installs stay reproducible:
 
 ```json
 {
@@ -92,7 +92,7 @@ What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI):
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Wholiver/metis-reverse.git",
+        "git+https://github.com/Wholiver/metis-reverse.git@latest",
         "metis-reverse"
       ]
     }
@@ -100,18 +100,22 @@ What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI):
 }
 ```
 
+Same idea on the CLI: `uvx --from git+https://github.com/Wholiver/metis-reverse.git@latest metis-reverse`.
+
 Optional env (not written by default): `GHIDRA_INSTALL_DIR`, `METIS_SIDECAR_DIR`.
 
-From a source checkout (Python **3.10+**):
+From a source checkout (Python **3.10+**), clone the **`latest`** tag (or `v1.0.1`):
 
 ```bash
-git clone https://github.com/Wholiver/metis-reverse.git
+git clone --branch latest --depth 1 https://github.com/Wholiver/metis-reverse.git
 cd metis-reverse
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
 
-Then point MCP `command` at that environment’s `metis-reverse`, or keep using the `uvx --from git+…` form above.
+Or download the source archive: [latest.zip](https://github.com/Wholiver/metis-reverse/archive/refs/tags/latest.zip).
+
+Then point MCP `command` at that environment’s `metis-reverse`, or keep using the `uvx --from git+…@latest` form above.
 
 </details>
 
@@ -166,7 +170,7 @@ cd demo && make
 
 <p align="center"><img src="docs/images/readme/en/sections/tools-v2.png" alt="MCP Tools" width="100%"></p>
 
-**About 29 MCP tools** in the v1.0.0 engine (handlers under `re_*` and `js_*`). Grouped by task below.
+**About 29 MCP tools** in the v1.0.1 engine (handlers under `re_*` and `js_*`). Grouped by task below.
 
 <details>
 <summary><b>Session · triage · artifacts</b></summary>
