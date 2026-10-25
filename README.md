@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/metis-reverse-cli"><img src="https://img.shields.io/npm/v/metis-reverse-cli?color=5aa9e6&label=npm%20metis-reverse-cli" alt="npm metis-reverse-cli"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-5aa9e6.svg" alt="License: Apache-2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-5aa9e6.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-5aa9e6.svg" alt="Python 3.10+"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-5aa9e6.svg" alt="Node.js >=18"></a>
   <a href="https://github.com/Wholiver/metis-reverse/stargazers"><img src="https://img.shields.io/github/stars/Wholiver/metis-reverse?style=flat&color=5aa9e6" alt="GitHub stars"></a>
@@ -281,4 +281,4 @@ Full notices live in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when that 
 
 ---
 
-<sub>Released under the [Apache-2.0 License](LICENSE). Engine + docs: [github.com/Wholiver/metis-reverse](https://github.com/Wholiver/metis-reverse). CLI on npm: [metis-reverse-cli](https://www.npmjs.com/package/metis-reverse-cli).</sub>
+<sub>Released under the [MIT License](LICENSE). Engine + docs: [github.com/Wholiver/metis-reverse](https://github.com/Wholiver/metis-reverse). CLI on npm: [metis-reverse-cli](https://www.npmjs.com/package/metis-reverse-cli).</sub>
