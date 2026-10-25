@@ -318,7 +318,7 @@ pip install -e ".[dev]" lief capstone pyyaml
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Wholiver/metis-reverse.git",
+        "git+https://github.com/Wholiver/metis-reverse.git@latest",
         "metis-reverse"
       ]
     }
