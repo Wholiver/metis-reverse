@@ -21,7 +21,7 @@
 
 > **v1.0.1 — 请装对包名。** 正式 CLI 是 [`metis-reverse-cli`](https://www.npmjs.com/package/metis-reverse-cli)（npm dist-tag **`latest` → 1.0.1**）。旧 npm 名 `metis-reverse` 仍停在 **0.0.1**，**不是**本版。推荐：`npx metis-reverse-cli@latest setup`。引擎仓库另有浮动 Git 标签 **`latest`**（当前等于 `v1.0.1`），供 `uvx` / 源码下载。
 
-<p align="center"><img src="docs/images/readme/zh/sections/quickstart-v2.png" alt="快速开始" width="100%"></p>
+<p align="center"><img src="docs/images/readme/zh/sections/quickstart-v3.png" alt="快速开始" width="100%"></p>
 
 **1. 安装并接入。** 需要 [Node.js](https://nodejs.org/) 18+ 和 [uv](https://docs.astral.sh/uv/)（引擎用 `uvx` 从 GitHub 拉；**目前没有** PyPI 包）。
 
@@ -166,7 +166,7 @@ cd demo && make
 </tr>
 </table>
 
-<p align="center"><img src="docs/images/readme/zh/arch-v2.png" alt="架构" width="100%"></p>
+<p align="center"><img src="docs/images/readme/zh/arch-v3.png" alt="架构" width="100%"></p>
 
 <p align="center"><img src="docs/images/readme/zh/sections/tools-v2.png" alt="MCP 工具" width="100%"></p>
 
