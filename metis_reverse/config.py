@@ -52,15 +52,43 @@ def _ensure_java_env() -> None:
     if brew_lib not in dyld.split(":"):
         os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = f"{brew_lib}:{dyld}" if dyld else brew_lib
 
+
+def _default_sidecar_dir() -> Path:
+    """Prefer METIS_SIDECAR_DIR; else ~/.metis_sidecars (not cwd — MCP often starts on a read-only cwd)."""
+    env = os.getenv("METIS_SIDECAR_DIR", "").strip()
+    if env:
+        return Path(env).expanduser()
+    return Path.home() / ".metis_sidecars"
+
+
+def _ensure_writable_dir(path: Path) -> Path:
+    """Create *path* if needed; on OSError (e.g. read-only cwd) fall back to ~/.metis_sidecars."""
+    path = path.expanduser()
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        # Probe writability (exist_ok mkdir can succeed on some RO mounts that still reject creates)
+        probe = path / ".metis_write_probe"
+        try:
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+        except OSError:
+            raise
+        return path
+    except OSError:
+        fallback = Path.home() / ".metis_sidecars"
+        if path.resolve() != fallback.resolve():
+            fallback.mkdir(parents=True, exist_ok=True)
+            return fallback
+        raise
+
+
 @dataclass
 class MetisConfig:
     """Metis runtime configuration."""
     ghidra_install_dir: str = field(
         default_factory=_find_default_ghidra
     )
-    sidecar_dir: Path = field(
-        default_factory=lambda: Path(os.getenv("METIS_SIDECAR_DIR", ".metis_sidecars"))
-    )
+    sidecar_dir: Path = field(default_factory=_default_sidecar_dir)
     sandbox_timeout_seconds: float = 5.0
     sandbox_max_memory_mb: int = 128
     enable_prompt_shield: bool = True
@@ -69,8 +97,10 @@ class MetisConfig:
 
     def __post_init__(self):
         _ensure_java_env()
-        if self.auto_create_dirs and not self.sidecar_dir.exists():
-            self.sidecar_dir.mkdir(parents=True, exist_ok=True)
+        if isinstance(self.sidecar_dir, str):
+            self.sidecar_dir = Path(self.sidecar_dir)
+        if self.auto_create_dirs:
+            self.sidecar_dir = _ensure_writable_dir(self.sidecar_dir)
 
     @property
     def has_ghidra(self) -> bool:
