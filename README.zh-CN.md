@@ -38,7 +38,7 @@ npm install -g metis-reverse-cli@latest
 metis setup          # 与 `metis-reverse` 是同一个入口
 ```
 
-`setup` 会探测本机上的编程 Agent，展示将要写入的内容（MCP + Skill + Cursor rules），给已有 MCP 配置留 `.bak`，确认后再写。看到 `Done.` 后重启 Agent。自检：
+`setup` 会探测本机上的编程 Agent，展示将要写入的内容（MCP + Skill + Cursor rules），给已有 MCP 配置留 `.bak`，确认后再写。看到 `Setup complete! Please restart your selected agents to activate Metis Reverse.` 后重启 Agent。自检：
 
 ```bash
 metis doctor

@@ -38,7 +38,7 @@ npm install -g metis-reverse-cli@latest
 metis setup          # same binary as `metis-reverse`
 ```
 
-`setup` finds coding agents on your machine, shows what it will write (MCP + Skill + Cursor rules), keeps a `.bak` of existing MCP configs, and asks before writing. When you see `Done.`, restart the agent. Check with:
+`setup` finds coding agents on your machine, shows what it will write (MCP + Skill + Cursor rules), keeps a `.bak` of existing MCP configs, and asks before writing. When you see `Setup complete! Please restart your selected agents to activate Metis Reverse.`, restart the agent. Check with:
 
 ```bash
 metis doctor
