@@ -83,7 +83,7 @@ Cursor also gets `~/.cursor/skills/metis-reverse` and `~/.cursor/rules/metis-rev
 <details>
 <summary><b>Advanced: manual MCP config & source install</b></summary>
 
-What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI). Pin the moving **`latest`** tag (or `v1.0.1`) so installs stay reproducible:
+What `setup` writes (engine via GitHub + uvx — **not** npm, **not** PyPI), pinned to the moving **`latest`** tag (currently `v1.0.1`):
 
 ```json
 {
